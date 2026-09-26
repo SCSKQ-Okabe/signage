@@ -1,0 +1,9 @@
+venv/
+build/
+sample/
+dist/
+__pycache__/
+*.zip
+*.spec
+
+
