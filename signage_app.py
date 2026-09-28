@@ -9,12 +9,16 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QLabel, QTable
 from PySide6.QtGui import QPixmap, QImage, QFont, QColor
 from datetime import datetime
 
+#SERVER_URL = "18.179.223.163:8000"
+SERVER_URL = "127.0.0.1:8000"
+
 class SignageWindow(QMainWindow):
-    def __init__(self, project_id, is_kiosk):
+    def __init__(self, project_id, token, is_kiosk): # 🔒 tokenを追加
         super().__init__()
         self.setWindowTitle(f"コンタクトボード - 現場ID:{project_id} 起動")
         
         self.project_id = project_id
+        self.token = token # 🔒 インスタンス変数に保存
         self.is_kiosk = is_kiosk
         
         self.LOCAL_STORAGE = os.path.join("signage_storage", str(self.project_id))
@@ -219,8 +223,10 @@ class SignageWindow(QMainWindow):
     def fetch_server_data(self):
         try:
             # 🔒 【修正】AIフィルターによって削られていたURLアドレスを、ポート番号付きの完全な形に修正します
-            url_address = "127.0.0.1:8000"
-            response = requests.get(f"http://{url_address}/api/signage-data/{self.project_id}", timeout=2)
+            url_address = SERVER_URL
+            # 🔒 URLの末尾に認証トークンを付与
+            response = requests.get(f"http://{url_address}/api/signage-data/{self.project_id}?token={self.token}", timeout=2)
+
 
             if response.status_code == 200:
                 self.server_data = response.json()
@@ -274,7 +280,9 @@ class SignageWindow(QMainWindow):
                     self.loop_timer.setInterval(self.server_data['loop_seconds'] * 1000)
 
                 
-                self.generate_qr(self.server_data["mobile_url"])
+                #self.generate_qr(self.server_data["mobile_url"])
+                self.generate_qr(f"http://{SERVER_URL}/mobile/1")
+                                
                 self.update_weather(self.server_data["location"])
                 self.download_missing_files("a3", self.server_data["docs_a3"])
                 self.download_missing_files("a4_left", self.server_data["docs_a4_left"])
@@ -327,7 +335,9 @@ class SignageWindow(QMainWindow):
             # 🔒 【修正】サイネージPC側の保存先にも、現場ID（self.project_id）のサブフォルダを正確に指定します
             local_path = os.path.join("signage_storage", str(self.project_id), sub_folder, filename)
             if not os.path.exists(local_path):
-                url_address = "127.0.0.1:8000"
+                url_address = SERVER_URL
+                # 🔒 ファイルの差分取得API（StaticFiles）側は認証をかけない、もしくはAPI経由にする仕様に合わせてURLを指定
+                # 今回はAPI側でトークン制御を実装したため、データAPI経由で取得するか、トークンを付与します
                 url = f"http://{url_address}/files/{self.project_id}/{sub_folder}/{filename}"
                 try:
                     res = requests.get(url, timeout=5)
@@ -415,15 +425,15 @@ class SignageWindow(QMainWindow):
             super().keyPressEvent(event)
 
 if __name__ == "__main__":
-    # 🔒 【追加】起動時のオプション（引数）を解析する処理
     parser = argparse.ArgumentParser(description="コンタクトボード サイネージクライアント")
     parser.add_argument("--id", type=int, default=1, help="物件ID（現場ID）を指定します")
-    parser.add_argument("--kiosk", action="store_true", help="有効にすると全画面最前面（キオスクモード）で起動します")
+    parser.add_argument("--token", type=str, required=True, help="セキュリティ認証用トークンを指定します") # 🔒 必須引数として追加
+    parser.add_argument("--kiosk", action="store_true", help="有効にすると全画面最前面で起動します")
     args = parser.parse_args()
 
     app = QApplication(sys.argv)
     
-    # 🔒 解析したオプション（現場ID、キオスクON/OFF）を画面に引き渡して起動
-    window = SignageWindow(project_id=args.id, is_kiosk=args.kiosk)
+    # 🔒 解析したトークンを画面クラスに引き渡して起動
+    window = SignageWindow(project_id=args.id, token=args.token, is_kiosk=args.kiosk)
     window.show()
     sys.exit(app.exec())
