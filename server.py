@@ -509,7 +509,7 @@ def delete_pdf(project_id: int, folder_key: str, filename: str, user_id: Optiona
     return RedirectResponse(url=f"/admin?current_id={project_id}", status_code=303)
 
 # 📱 物件別オープンスマホサイト（一般住民用：仕様通り認証不要のまま維持）
-@app.get("/mobile/{{project_id}}", response_class=HTMLResponse)
+@app.get("/mobile/{project_id}", response_class=HTMLResponse)
 def mobile_site(project_id: int):
     info = fetch_project_info(project_id)
     if not info: 
@@ -547,7 +547,7 @@ def mobile_site(project_id: int):
     return html_content
 
 # 🔒 オブジェクトとDBから物件を完全に消去するAPI（🔒 所有権チェック）
-@app.get("/admin/project/delete/{{project_id}}")
+@app.get("/admin/project/delete/{project_id}")
 def delete_project_completely(project_id: int, user_id: Optional[int] = Depends(get_current_user_id)):
     if user_id is None:
         return RedirectResponse(url="/login", status_code=303)

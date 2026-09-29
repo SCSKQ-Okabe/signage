@@ -9,8 +9,8 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QLabel, QTable
 from PySide6.QtGui import QPixmap, QImage, QFont, QColor
 from datetime import datetime
 
-#SERVER_URL = "18.179.223.163:8000"
-SERVER_URL = "127.0.0.1:8000"
+SERVER_URL = "13.196.186.120:8000"
+#SERVER_URL = "127.0.0.1:8000"
 
 class SignageWindow(QMainWindow):
     def __init__(self, project_id, token, is_kiosk): # 🔒 tokenを追加
