@@ -1,6 +1,6 @@
 import os
 import sqlite3
-import secrets  # 🔒 安全なトークン生成に必要です
+import secrets
 from fastapi import FastAPI, Form, UploadFile, File, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -8,10 +8,42 @@ from datetime import datetime
 from passlib.context import CryptContext
 from typing import Optional
 from fastapi import Request
+import urllib.request  # 🌐 EC2のメタデータを取得するために追加
+import urllib.error
 
 app = FastAPI()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 DB_FILE = "contact_board.db"
+
+# 🌐 EC2のパブリックIPアドレスを自動取得する関数を追加
+def get_ec2_public_ip() -> str:
+    """
+    AWS EC2のメタデータ（IMDSv2）からパブリックIPアドレスを取得します。
+    取得に失敗した場合やローカル環境の場合は '127.0.0.1' を返します。
+    """
+    token_url = "http://169.254.169.254"
+    ip_url = "http://169.254.169.254"
+    
+    try:
+        # 1. IMDSv2のセッショントークンを取得（有効期限60秒）
+        token_req = urllib.request.Request(token_url, method="PUT")
+        token_req.add_header("X-aws-ec2-metadata-token-ttl-seconds", "60")
+        with urllib.request.urlopen(token_req, timeout=2) as token_res:
+            token = token_res.read().decode("utf-8")
+        
+        # 2. トークンを使ってパブリックIPアドレスを取得
+        ip_req = urllib.request.Request(ip_url)
+        ip_req.add_header("X-aws-ec2-metadata-token", token)
+        with urllib.request.urlopen(ip_req, timeout=2) as ip_res:
+            return ip_res.read().decode("utf-8").strip()
+            
+    except (urllib.error.URLError, TimeoutError):
+        # AWS環境ではない（ローカルPCなど）場合はローカルホストを返す
+        return "127.0.0.1"
+
+# サーバー起動時に一度だけIPアドレスを確定させてキャッシュしておく
+SERVER_PUBLIC_IP = get_ec2_public_ip()
+
 
 def init_db():
     """データベースのテーブル作成と初期デモデータの登録"""
@@ -69,7 +101,7 @@ def init_db():
         conn.commit()
     conn.close()
 
-# 念のため関数を呼び出す
+# 念ため関数を呼び出す
 init_db()
 
 
@@ -125,8 +157,8 @@ def fetch_project_info(project_id):
         "total_days": total_days,
         "elapsed_days": elapsed_days,
         "today_str": today.strftime("%Y年%m月%d日"),
-        #"mobile_url": f"http://18.179.223.163:8000/mobile/{project_id}"
-        "mobile_url": f"http://127.0.0.1:8000/mobile/{project_id}"
+        # 🌐 自動取得したパブリックIPアドレスをURLに組み込むよう変更
+        "mobile_url": f"http://{SERVER_PUBLIC_IP}:8000/mobile/{project_id}"
     }
 
 # 🔒 【新規追加】Cookieから現在のログインユーザーを特定するセキュリティ関数
