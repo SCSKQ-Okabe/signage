@@ -125,7 +125,8 @@ def fetch_project_info(project_id):
         "total_days": total_days,
         "elapsed_days": elapsed_days,
         "today_str": today.strftime("%Y年%m月%d日"),
-        "mobile_url": f"http://127.0.0{project_id}"
+        #"mobile_url": f"http://18.179.223.163:8000/mobile/{project_id}"
+        "mobile_url": f"http://127.0.0.1:8000/mobile/{project_id}"
     }
 
 # 🔒 【新規追加】Cookieから現在のログインユーザーを特定するセキュリティ関数
