@@ -9,17 +9,15 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QLabel, QTable
 from PySide6.QtGui import QPixmap, QImage, QFont, QColor
 from datetime import datetime
 
-SERVER_URL = "13.196.186.120:8000"
-#SERVER_URL = "127.0.0.1:8000"
-
 class SignageWindow(QMainWindow):
-    def __init__(self, project_id, token, is_kiosk): # 🔒 tokenを追加
+    def __init__(self, project_id, token, is_kiosk, server_url):
         super().__init__()
         self.setWindowTitle(f"コンタクトボード - 現場ID:{project_id} 起動")
         
         self.project_id = project_id
-        self.token = token # 🔒 インスタンス変数に保存
+        self.token = token
         self.is_kiosk = is_kiosk
+        self.server_url = server_url
         
         self.LOCAL_STORAGE = os.path.join("signage_storage", str(self.project_id))
         for sub in ["a3", "a4_left", "a4_right"]:
@@ -53,7 +51,6 @@ class SignageWindow(QMainWindow):
 
         # 🔒 【修正】サイズ変数が確定した状態（0ではない状態）で、満を持してサーバーからデータを取得・描画します
         self.fetch_server_data()
-
 
     def init_ui(self):
         self.main_widget = QWidget()
@@ -222,9 +219,7 @@ class SignageWindow(QMainWindow):
 
     def fetch_server_data(self):
         try:
-            # 🔒 【修正】AIフィルターによって削られていたURLアドレスを、ポート番号付きの完全な形に修正します
-            url_address = SERVER_URL
-            # 🔒 URLの末尾に認証トークンを付与
+            url_address = self.server_url
             response = requests.get(f"http://{url_address}/api/signage-data/{self.project_id}?token={self.token}", timeout=2)
 
 
@@ -280,8 +275,7 @@ class SignageWindow(QMainWindow):
                     self.loop_timer.setInterval(self.server_data['loop_seconds'] * 1000)
 
                 
-                #self.generate_qr(self.server_data["mobile_url"])
-                self.generate_qr(f"http://{SERVER_URL}/mobile/1")
+                self.generate_qr(f"http://{self.server_url}/mobile/{self.project_id}")
                                 
                 self.update_weather(self.server_data["location"])
                 self.download_missing_files("a3", self.server_data["docs_a3"])
@@ -332,19 +326,15 @@ class SignageWindow(QMainWindow):
     def download_missing_files(self, sub_folder, file_list):
         if not self.server_data: return
         for filename in file_list:
-            # 🔒 【修正】サイネージPC側の保存先にも、現場ID（self.project_id）のサブフォルダを正確に指定します
             local_path = os.path.join("signage_storage", str(self.project_id), sub_folder, filename)
             if not os.path.exists(local_path):
-                url_address = SERVER_URL
-                # 🔒 ファイルの差分取得API（StaticFiles）側は認証をかけない、もしくはAPI経由にする仕様に合わせてURLを指定
-                # 今回はAPI側でトークン制御を実装したため、データAPI経由で取得するか、トークンを付与します
+                url_address = self.server_url
                 url = f"http://{url_address}/files/{self.project_id}/{sub_folder}/{filename}"
                 try:
                     res = requests.get(url, timeout=5)
                     if res.status_code == 200:
                         with open(local_path, "wb") as f: f.write(res.content)
                 except Exception: pass
-
 
     def render_pdf_page(self, pdf_path, label_widget, max_w, max_h):
         """PDFの1ページ目を高精細に画像化してQLabelにぴったり収まるよう描画（最新PyMuPDF仕様対応版）"""
@@ -409,7 +399,6 @@ class SignageWindow(QMainWindow):
             self.area_a4_r.setPixmap(QPixmap()); self.area_a4_r.setText("資料なし")
         self.main_widget.update()
 
-
     # 🔒 【新規追加】キオスクモード時の専用終了イベントロジック
     def keyPressEvent(self, event):
         """キーボードの入力を監視し、EscキーまたはCtrl+Qでアプリを安全に終了させる"""
@@ -429,11 +418,10 @@ if __name__ == "__main__":
     parser.add_argument("--id", type=int, default=1, help="物件ID（現場ID）を指定します")
     parser.add_argument("--token", type=str, required=True, help="セキュリティ認証用トークンを指定します") # 🔒 必須引数として追加
     parser.add_argument("--kiosk", action="store_true", help="有効にすると全画面最前面で起動します")
+    parser.add_argument("--server", type=str, default="127.0.0.1:8000", help="接続先IPアドレスまたはドメイン（例: 13.196.186.120:8000）")
     args = parser.parse_args()
-
     app = QApplication(sys.argv)
-    
-    # 🔒 解析したトークンを画面クラスに引き渡して起動
-    window = SignageWindow(project_id=args.id, token=args.token, is_kiosk=args.kiosk)
+    window = SignageWindow(project_id=args.id, token=args.token, is_kiosk=args.kiosk, server_url=args.server)
     window.show()
     sys.exit(app.exec())
+    

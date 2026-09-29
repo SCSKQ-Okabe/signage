@@ -131,10 +131,14 @@ cd ~/signage-app
 git clone https://github.com/SCSKQ-Okabe/signage.git .
 仮想環境を作成して依存パッケージを入れる
 bash
+
 python3 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
 pip install fastapi uvicorn python-multipart
+pip install passlib
+pip install bcrypt==4.3.0
+
 本番用に bind 先だけ一時的に修正
 現状の server.py はローカル(127.0.0.1) に向いています。EC2 上で外部アクセスさせるため、起動時の IP を 0.0.0.0 に変更します。
 
