@@ -124,10 +124,10 @@ class SignageWindow(QMainWindow):
         self.weather_label.setStyleSheet("font-size: 15px; font-weight: bold; background-color: #222222; color: #ffffff; padding: 10px; border: 1px solid #000000; border-radius: 4px;")
         self.weather_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         
-        self.lbl_taihei_logo = QLabel(self.main_widget)
-        self.lbl_taihei_logo.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        if os.path.exists("taihei_logo.png"):
-            self.lbl_taihei_logo.setPixmap(QPixmap("taihei_logo.png").scaled(280, 90, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        self.lbl_logo = QLabel(self.main_widget)
+        self.lbl_logo.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        if os.path.exists("logo.png"):
+            self.lbl_logo.setPixmap(QPixmap("logo.png").scaled(280, 90, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         
         self.recalculate_positions()
 
@@ -198,9 +198,9 @@ class SignageWindow(QMainWindow):
         self.weather_label.setGeometry(qr_container_x + qr_container_w + gap, footer_y, int(300 * scale), footer_h)
         self.weather_label.setStyleSheet(f"font-size: {int(15 * scale)}px; font-weight: bold; background-color: #222222; color: #ffffff; padding: {int(10 * scale)}px; border: 1px solid #000000; border-radius: 4px;")
         logo_w = int(300 * scale)
-        self.lbl_taihei_logo.setGeometry(win_w - logo_w - margin, footer_y, logo_w, footer_h)
-        if os.path.exists("taihei_logo.png"):
-            self.lbl_taihei_logo.setPixmap(QPixmap("taihei_logo.png").scaled(logo_w, footer_h, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        self.lbl_logo.setGeometry(win_w - logo_w - margin, footer_y, logo_w, footer_h)
+        if os.path.exists("logo.png"):
+            self.lbl_logo.setPixmap(QPixmap("logo.png").scaled(logo_w, footer_h, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         center_y = header_h + gap
         center_h = footer_y - center_y - gap
         available_w = win_w - (margin * 2) - (gap * 2)
