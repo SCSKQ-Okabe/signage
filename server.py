@@ -21,8 +21,8 @@ def get_ec2_public_ip() -> str:
     AWS EC2のメタデータ（IMDSv2）からパブリックIPアドレスを取得します。
     取得に失敗した場合やローカル環境の場合は '127.0.0.1' を返します。
     """
-    token_url = "http://169.254.169.254"
-    ip_url = "http://169.254.169.254"
+    token_url = "http://169.254.169.254/latest/api/token"
+    ip_url = "http://169.254.169.254/latest/meta-data/public-ipv4"
     
     try:
         # 1. IMDSv2のセッショントークンを取得（有効期限60秒）
