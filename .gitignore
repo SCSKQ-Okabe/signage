@@ -3,7 +3,5 @@ build/
 sample/
 dist/
 __pycache__/
-server_storage/
-signage_storage/
 *.zip
 *.spec
