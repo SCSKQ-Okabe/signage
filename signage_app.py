@@ -325,6 +325,8 @@ class SignageWindow(QMainWindow):
 
     def download_missing_files(self, sub_folder, file_list):
         if not self.server_data: return
+
+        # --- 1. 新しいファイルのダウンロード処理（既存通り） ---
         for filename in file_list:
             local_path = os.path.join("signage_storage", str(self.project_id), sub_folder, filename)
             if not os.path.exists(local_path):
@@ -335,6 +337,20 @@ class SignageWindow(QMainWindow):
                     if res.status_code == 200:
                         with open(local_path, "wb") as f: f.write(res.content)
                 except Exception: pass
+
+        # --- 2. 【追加】不要になったローカルファイルの自動削除処理 ---
+        local_folder = os.path.join("signage_storage", str(self.project_id), sub_folder)
+        if os.path.exists(local_folder):
+            for local_file in os.listdir(local_folder):
+                # PDFファイルのみを対象とする
+                if local_file.lower().endswith('.pdf'):
+                    # サーバーの最新リストに含まれていない場合は削除
+                    if local_file not in file_list:
+                        try:
+                            os.remove(os.path.join(local_folder, local_file))
+                            print(f"削除された古いファイルをローカルから消去しました: {local_file}")
+                        except Exception as e:
+                            print(f"ローカルファイルの削除に失敗しました: {e}")
 
     def render_pdf_page(self, pdf_path, label_widget, max_w, max_h):
         """PDFの1ページ目を高精細に画像化してQLabelにぴったり収まるよう描画（最新PyMuPDF仕様対応版）"""
