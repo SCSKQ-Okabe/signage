@@ -286,7 +286,7 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                 <!-- 📋 コピペ専用ブロック（ここを追加） -->
                 <div style="background:#fffbe6; padding:12px; border-radius:6px; margin-bottom:15px; border:1px solid #ffe58f; font-size:13px; color:#555;">
                     📌 <b>この現場のサイネージPC起動コマンド</b>（バッチファイル作成時にそのままコピー＆ペーストしてください）
-                    <textarea readonly style="width:100%; height:45px; background:#fff; margin-top:6px; padding:6px; font-family:monospace; font-size:12px; border:1px solid #ccc; border-radius:4px; resize:none; font-weight:bold; color:#000;" onclick="this.select();">python signage_app.py --id {info['id']} --token {info['signage_token']} --server {SERVER_PUBLIC_IP}:8000 --kiosk</textarea>
+                    <textarea readonly style="width:100%; height:45px; background:#fff; margin-top:6px; padding:6px; font-family:monospace; font-size:12px; border:1px solid #ccc; border-radius:4px; resize:none; font-weight:bold; color:#000;" onclick="this.select();">signage_app.exe --id {info['id']} --token {info['signage_token']} --server {SERVER_PUBLIC_IP}:8000 --kiosk</textarea>
                     <span style="font-size:11px; color:#888;">※枠内をクリックすると全選択されます。</span>
                 </div>
 

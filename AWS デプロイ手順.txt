@@ -1,4 +1,5 @@
 📋 AWS デプロイ手順（第3章準拠）
+
 ステップ1：EC2インスタンスの起動
 AWSコンソール → EC2ダッシュボード を開く
 
@@ -75,19 +76,24 @@ EC2インスタンスを選択
 ssh -i "signage-prod-key.pem" ubuntu@13.230.123.45
 完了したら、次はこの接続先で以下の準備を行います:
 
-システム更新
-Python3 と venv のインストール
-Git で repo を clone
-依存パッケージの導入
-server.py を起動
-次の実行は「ステップ2」をそのまま進めます。必要ならそのまま続行します。
 ----------------------------------------------------------------------------------------------
-
 ステップ2：EC2へのアクセスとserver.pyのデプロイ
 SSH で Ubuntu へ接続し、必要な環境をセットアップします。以下のコマンドを順に実行：
 
-bash
-# SSH接続（ダウンロードした.pemファイルのパスに変更）
+コマンドプロンプトを「管理者として実行」し、次を実行してください。
+
+takeown /f signage-key.pem
+
+icacls signage-key.pem /reset
+icacls signage-key.pem /inheritance:r
+icacls signage-key.pem /remove:g "NT AUTHORITY\Authenticated Users"
+icacls signage-key.pem /remove:g "BUILTIN\Users"
+icacls signage-key.pem /remove:g "Everyone"
+icacls signage-key.pem /grant:r "%USERNAME%:R"
+
+icacls signage-key.pem
+表示結果に、自分のユーザー名だけが読み取り権限として残っていれば問題ありません。
+
 ssh -i /path/to/your-key.pem ubuntu@<EC2のパブリックIP>
 
 # システム更新
@@ -96,42 +102,10 @@ sudo apt update && sudo apt upgrade -y
 # Pythonと必須ツールをインストール
 sudo apt install -y python3 python3-pip python3-venv git
 
-# 作業ディレクトリの作成
-mkdir -p ~/signage-app
-cd ~/signage-app
-
 # Gitリポジトリをクローン
-git clone https://github.com/SCSKQ-Okabe/signage.git .
+git clone https://github.com/SCSKQ-Okabe/signage.git
 
 # Python仮想環境の作成
-python3 -m venv venv
-source venv/bin/activate
-
-# 必要なPythonライブラリをインストール
-pip install fastapi uvicorn python-multipart
-
-----------------------------------------------------------------------------------------------
-はい、Step 2 は「EC2へ接続して、アプリを動かして確認する」までです。以下をそのまま EC2 で実行してください。
-
-EC2へSSH接続
-bash
-ssh -i /path/to/your-key.pem ubuntu@<EC2のパブリックIP>
-例:
-
-bash
-ssh -i ~/.ssh/signage-prod-key.pem ubuntu@13.230.123.45
-システム更新と依存関係のインストール
-bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y python3 python3-pip python3-venv git
-作業ディレクトリを作成してリポジトリを取得
-bash
-mkdir -p ~/signage-app
-cd ~/signage-app
-git clone https://github.com/SCSKQ-Okabe/signage.git .
-仮想環境を作成して依存パッケージを入れる
-bash
-
 python3 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
@@ -139,101 +113,35 @@ pip install fastapi uvicorn python-multipart
 pip install passlib
 pip install bcrypt==4.3.0
 
-本番用に bind 先だけ一時的に修正
-現状の server.py はローカル(127.0.0.1) に向いています。EC2 上で外部アクセスさせるため、起動時の IP を 0.0.0.0 に変更します。
-
-bash
-python3 - <<'PY'
-from pathlib import Path
-p = Path("server.py")
-text = p.read_text()
-old = 'uvicorn.run(app, host="127.0.0.1", port=8000)'
-new = 'uvicorn.run(app, host="0.0.0.0", port=8000)'
-if old in text:
-    text = text.replace(old, new)
-    p.write_text(text)
-    print("updated host binding")
-else:
-    print("pattern not found")
-PY
-アプリを起動して動作確認
-bash
-source venv/bin/activate
 python3 server.py
-このままだと起動ログがターミナルに流れ続けます。別タブで確認する場合は、もう一度 EC2 にSSH接続して以下を実行してください。
 
-bash
+このままだと起動ログがターミナルに流れ続けます。
+別タブで確認する場合は、もう一度 EC2 にSSH接続して以下を実行してください。
+
 curl -I http://localhost:8000/admin
 もし 200 などが返れば、アプリは起動しています。
 
 パブリックIP経由でアクセス確認
 ブラウザで以下にアクセスします。
 
-Text
 http://<EC2のパブリックIP>:8000/admin
 例:
-
-Text
 http://13.230.123.45:8000/admin
 ここで画面が見えれば、Step 2 は完了です。
 
-補足:
-
-この段階では「本番ドメイン（https://your-domain.com）」ではなく、EC2のパブリックIPで動作確認しています。
-本番向けの HTTPS / Route53 / ACM は次の Step 3 で設定します。
-Step 3 で service 化（systemd）も行います。
-
-原因は、signage-key.pem が他のWindowsユーザーからも読み取り可能なため、OpenSSHが秘密鍵を安全でないファイルとして拒否していることです。
-
-D:\TAIHEI で コマンドプロンプトを開き、以下を実行してください。
-
-bat
-cd /d D:\TAIHEI
-
-takeown /f signage-key.pem
-
-icacls signage-key.pem /inheritance:r
-icacls signage-key.pem /remove:g "NT AUTHORITY\Authenticated Users"
-icacls signage-key.pem /remove:g "BUILTIN\Users"
-icacls signage-key.pem /remove:g "Everyone"
-icacls signage-key.pem /grant:r "%USERNAME%:R"
-
-アクセス権を確認します。
-
-bat
-icacls signage-key.pem
-表示結果に、自分のユーザー名だけが読み取り権限として残っていれば問題ありません。
-
-その後、再接続してください。
-
-まだ同じエラーが出る場合
-コマンドプロンプトを「管理者として実行」し、次を実行してください。
-
-bat
-cd /d D:\TAIHEI
-icacls signage-key.pem /reset
-icacls signage-key.pem /inheritance:r
-icacls signage-key.pem /remove:g "NT AUTHORITY\Authenticated Users"
-icacls signage-key.pem /remove:g "BUILTIN\Users"
-icacls signage-key.pem /remove:g "Everyone"
-icacls signage-key.pem /grant:r "%USERNAME%:R"
-
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y python3 python3-pip python3-venv git
-
-3. AWSセキュリティグループで8000番ポートを許可
+----------------------------------------------------------------------------------------------
+ステップ3：AWSセキュリティグループで8000番ポートを許可
 AWSコンソールで以下を開きます。
 
 EC2
 インスタンス
 対象インスタンスを選択
 「セキュリティ」タブ
+
 関連付けられたセキュリティグループをクリック
 「インバウンドルール」→「インバウンドルールを編集」
 ルールを追加
-設定値：
 
-Text
 タイプ: カスタムTCP
 ポート範囲: 8000
 ソース: 自分のIP
@@ -241,39 +149,15 @@ Text
 どこからでもアクセス可能にする場合
 セキュリティグループのインバウンドルールを変更してください。
 
-Code
 タイプ: カスタムTCP
 ポート範囲: 8000
 ソース: 0.0.0.0/0
 これなら、世界中どこからでもポート8000にアクセス可能になります。
-
-ただし、本番環境では非常に危険です。理由：
-
+ただし、本番環境では非常に危険です。
+理由：
 認証なし → 誰でも管理画面に入れる
 SQLite データベースが直接露出
 PDF ファイルが無保護
-
------------------------------------------------------------------------------------------------------------
-ステップ3：server.pyの本番URL設定
-現在、server.py は ローカルホスト（127.0.0.1） に設定されています。これを AWS本番URL に変更する必要があります。
-
-修正対象行：
-
-100行目：mobile_url = f"http://127.0.0.1:8000/mobile/{project_id}"
-397行目：uvicorn.run(app, host="127.0.0.1", port=8000)
-まず、Route 53でドメインを取得したら、以下を修正してください：
-
-bash
-# エディタで server.py を編集
-nano server.py
-修正内容：
-
-Python
-# 100行目付近
-mobile_url = f"https://your-domain.com/mobile/{project_id}"  # 「your-domain.com」は取得したドメインに変更
-
-# 397行目付近（本番では外部アクセス対応）
-uvicorn.run(app, host="0.0.0.0", port=8000)  # 全インターフェースでリッスン
 
 -----------------------------------------------------------------------------------------------------------
 ステップ4：Systemdサービス登録（常時起動）
@@ -313,7 +197,9 @@ AWSコンソール → Route 53 → 登録済みドメイン → ドメインの
 希望するドメイン名を入力（例：signage-kontakuboodo.com）
 .com ドメイン取得（年間約2,000円）
 所有者情報を入力・決済
-【最重要】 届いたメール内の確認用リンクを 14日以内にクリック ✅
+【最重要】 届いたメール内の確認用リンクを 14日以内にクリック
+
+-----------------------------------------------------------------------------------------------------------
 ステップ6：ACM（SSL証明書）の設定
 AWSコンソール → Certificate Manager → 証明書のリクエスト
 ドメイン名を入力：your-domain.com と *.your-domain.com
@@ -361,17 +247,9 @@ sudo systemctl restart nginx
 sudo systemctl enable nginx
 
 -----------------------------------------------------------------------------------------------------------
-ステップ8：テスト・動作確認
-bash
-# ローカルでサーバーが起動しているか確認
-curl http://127.0.0.1:8000/admin
+AWS設定
 
-# ドメイン経由でアクセス
-curl https://your-domain.com/admin
-ブラウザで https://your-domain.com/admin にアクセスして、ダッシュボードが表示されたら成功です！
-
------------------------------------------------------------------------------------------------------------
-ステップ9：現場PCのURL更新（第3章4項目）
-各現場のWindows PCに配置した signage_app.py の接続先URLを更新：
-
+sakoguchi@taihei-paint.com
+Taihei2233+
+AWS-EC2:13.114.16.175
 
