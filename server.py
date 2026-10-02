@@ -291,7 +291,7 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                 <!-- 📋 コピペ専用ブロック（ここを追加） -->
                 <div style="background:#fffbe6; padding:12px; border-radius:6px; margin-bottom:15px; border:1px solid #ffe58f; font-size:13px; color:#555;">
                     📌 <b>この現場のサイネージPC起動コマンド</b>（バッチファイル作成時にそのままコピー＆ペーストしてください）
-                    <textarea readonly style="width:100%; height:45px; background:#fff; margin-top:6px; padding:6px; font-family:monospace; font-size:12px; border:1px solid #ccc; border-radius:4px;">start /B python signage_client.py --project {info['id']} --token {info['signage_token']}</textarea>
+                    <textarea readonly style="width:100%; height:45px; background:#fff; margin-top:6px; padding:6px; font-family:monospace; font-size:12px; border:1px solid #ccc; border-radius:4px;" onclick="this.select();">signage_app.exe --id {info['id']} --token {info['signage_token']} --server {SERVER_PUBLIC_IP}:8000 --kiosk</textarea>
                     <span style="font-size:11px; color:#888;">※枠内をクリックすると全選択されます。</span>
                 </div>
 
@@ -305,8 +305,8 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                     <div>ループ切替:</div><div><input type="number" name="loop_seconds" value="{info['loop_seconds']}" style="width:80px;"> 秒</div>
                     <div></div>
                     <div style="display: flex; gap: 12px; align-items: center; width: max-content;">
-                        <button type="submit" style="padding: 10px 16px; background: #00a0e9; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; width:160px;">変更を保存</button>
-                        <a href="/admin/project/delete/{info['id']}" onclick="return confirm('🚨 本当に物件を完全削除しますか？中身のPDFもすべて消去され、元に戻せません。')" style="color:#ff4d4f; font-weight:bold;">完全削除</a>
+                        <button type="submit" style="padding: 10px 16px; background: #00a0e9; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; width: auto;">✏️ 設定を保存</button>
+                        <button type="button" onclick="confirmDelete({info['id']}, '{info['name']}')" style="padding: 10px 16px; background: #ff4d4f; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; width: auto;">🗑️ この物件を削除する</button>
                     </div>
                 </form>
             </div>
@@ -319,7 +319,7 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
             <div class="grid">
                 <div class="col">
                     <h4>【左】A4区画（作業内容等）</h4>
-                    <div class="drop-zone" id="dz-a4_left">ここにPDFをドラッグ＆ドロップ<br><span style="font-size:12px; color:#666;">（またはクリックしてファイル選択）</div>
+                    <div class="drop-zone" id="dz-a4_left">ここにPDFをドラッグ＆ドロップ<br><span style="font-size:12px; color:#666;">（またはクリックしてファイル選択）</span></div>
                     <form id="form-a4_left" action="/admin/upload/{info['id']}/a4_left" method="post" enctype="multipart/form-data">
                         <input type="file" id="file-a4_left" name="file" accept=".pdf" onchange="document.getElementById('form-a4_left').submit();" style="display:none;">
                     </form>
@@ -327,7 +327,7 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                 </div>
                 <div class="col">
                     <h4>【中央】A3区画（お知らせ図面等）</h4>
-                    <div class="drop-zone" id="dz-a3">ここにPDFをドラッグ＆ドロップ<br><span style="font-size:12px; color:#666;">（またはクリックしてファイル選択）</div>
+                    <div class="drop-zone" id="dz-a3">ここにPDFをドラッグ＆ドロップ<br><span style="font-size:12px; color:#666;">（またはクリックしてファイル選択）</span></div>
                     <form id="form-a3" action="/admin/upload/{info['id']}/a3" method="post" enctype="multipart/form-data">
                         <input type="file" id="file-a3" name="file" accept=".pdf" onchange="document.getElementById('form-a3').submit();" style="display:none;">
                     </form>
@@ -335,7 +335,7 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                 </div>
                 <div class="col">
                     <h4>【右】A4区画（洗濯物情報等）</h4>
-                    <div class="drop-zone" id="dz-a4_right">ここにPDFをドラッグ＆ドロップ<br><span style="font-size:12px; color:#666;">（またはクリックしてファイル選択）</div>
+                    <div class="drop-zone" id="dz-a4_right">ここにPDFをドラッグ＆ドロップ<br><span style="font-size:12px; color:#666;">（またはクリックしてファイル選択）</span></div>
                     <form id="form-a4_right" action="/admin/upload/{info['id']}/a4_right" method="post" enctype="multipart/form-data">
                         <input type="file" id="file-a4_right" name="file" accept=".pdf" onchange="document.getElementById('form-a4_right').submit();" style="display:none;">
                     </form>
@@ -407,7 +407,7 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                     <div>連絡先TEL:</div><div><input type="text" name="tel" placeholder="090-0000-0000"></div>
                     <div>物件所在地:</div><div><input type="text" name="location" placeholder="福岡県博多区"></div>
                     <div>ループ切替:</div><div><input type="number" name="loop_seconds" value="5" style="width:80px;"> 秒</div>
-                    <div></div><div><button type="submit" style="padding:10px 20px; background:#52c41a; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">新規物件作成</button></div>
+                    <div></div><div><button type="submit" style="padding:10px 20px; background:#52c41a; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">新規物件を追加</button></div>
                 </form>
             </div>
         </div>
@@ -667,7 +667,7 @@ def admin_users(user_id: Optional[int] = Depends(get_current_user_id)):
         # プロジェクト数をカウント
         cursor.execute("SELECT COUNT(*) FROM projects WHERE user_id = ?", (uid,))
         cnt = cursor.fetchone()[0]
-        delete_btn = "" if uname == 'admin' else f"<a href='/admin/users/delete/{uid}' style='color:red;' onclick=\"return confirm('このユーザーを削除しますか？\n関連する物件は残ります。')\">削除</a>"
+        delete_btn = "" if uname == 'admin' else f"<a href='/admin/users/delete/{uid}' style='color:red;' onclick=\"return confirm('このユーザーを削除しますか？\n関連する物件情報も同時に削除されます。');\">削除</a>"
         users_html += f"<tr><td>{uid}</td><td>{uname}</td><td>{cnt}</td><td>{delete_btn}</td></tr>"
 
     conn.close()
