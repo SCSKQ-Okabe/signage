@@ -7,3 +7,4 @@ server_storage/
 signage_storage/
 *.zip
 *.spec
+*.db
