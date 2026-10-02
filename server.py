@@ -44,6 +44,13 @@ def get_ec2_public_ip() -> str:
 # サーバー起動時に一度だけIPアドレスを確定させてキャッシュしておく
 SERVER_PUBLIC_IP = get_ec2_public_ip()
 
+# 🟢 【修正】日本語曜日配列
+WEEKDAY_JA = ["日", "月", "火", "水", "木", "金", "土"]
+
+def format_date_with_weekday(date_obj):
+    """datetimeオブジェクトから曜日付き日本語表記を生成"""
+    return date_obj.strftime(f"%Y年%m月%d日 ({WEEKDAY_JA[date_obj.weekday()]})")
+
 
 def init_db():
     """データベースのテーブル作成と初期デモデータの登録"""
@@ -151,12 +158,15 @@ def fetch_project_info(project_id):
     
     files = get_stored_files(project_id)
     
+    # 🟢 【修正】曜日を含んだ日本語形式で日付を返す（毎回API呼び出し時に計算される）
     return {
         **project,
         **files,
         "total_days": total_days,
         "elapsed_days": elapsed_days,
-        "today_str": today.strftime("%Y年%m月%d日"),
+        "today_str": format_date_with_weekday(today),
+        "start_date": format_date_with_weekday(start),
+        "end_date": format_date_with_weekday(end),
         # 🌐 自動取得したパブリックIPアドレスをURLに組み込むよう変更
         "mobile_url": f"http://{SERVER_PUBLIC_IP}:8000/mobile/{project_id}"
     }
@@ -291,22 +301,22 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                 <!-- 📋 コピペ専用ブロック（ここを追加） -->
                 <div style="background:#fffbe6; padding:12px; border-radius:6px; margin-bottom:15px; border:1px solid #ffe58f; font-size:13px; color:#555;">
                     📌 <b>この現場のサイネージPC起動コマンド</b>（バッチファイル作成時にそのままコピー＆ペーストしてください）
-                    <textarea readonly style="width:100%; height:45px; background:#fff; margin-top:6px; padding:6px; font-family:monospace; font-size:12px; border:1px solid #ccc; border-radius:4px;" onclick="this.select();">signage_app.exe --id {info['id']} --token {info['signage_token']} --server {SERVER_PUBLIC_IP}:8000 --kiosk</textarea>
+                    <textarea readonly style="width:100%; height:45px; background:#fff; margin-top:6px; padding:6px; font-family:monospace; font-size:12px; border:1px solid #ccc; border-radius:4px;" onclick="this.select();">python signage_app.py --id {current_id} --token {info['signage_token']} --kiosk --server {SERVER_PUBLIC_IP}:8000</textarea>
                     <span style="font-size:11px; color:#888;">※枠内をクリックすると全選択されます。</span>
                 </div>
 
                 <form action="/admin/update/{info['id']}" method="post" class="form-grid">
                     <div>工事・物件名:</div><div><input type="text" name="name" value="{info['name']}"></div>
-                    <div>着工日:</div><div><input type="date" name="start_date" value="{info['start_date']}"></div>
-                    <div>完工日:</div><div><input type="date" name="end_date" value="{info['end_date']}"></div>
+                    <div>着工日:</div><div><input type="date" name="start_date" value="{info['start_date'][:10]}"></div>
+                    <div>完工日:</div><div><input type="date" name="end_date" value="{info['end_date'][:10]}"></div>
                     <div>現場代理人:</div><div><input type="text" name="agent" value="{info['agent']}"></div>
                     <div>連絡先TEL:</div><div><input type="text" name="tel" value="{info['tel']}"></div>
                     <div>物件所在地:</div><div><input type="text" name="location" value="{info['location']}"></div>
                     <div>ループ切替:</div><div><input type="number" name="loop_seconds" value="{info['loop_seconds']}" style="width:80px;"> 秒</div>
                     <div></div>
                     <div style="display: flex; gap: 12px; align-items: center; width: max-content;">
-                        <button type="submit" style="padding: 10px 16px; background: #00a0e9; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; width: auto;">✏️ 設定を保存</button>
-                        <button type="button" onclick="confirmDelete({info['id']}, '{info['name']}')" style="padding: 10px 16px; background: #ff4d4f; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; width: auto;">🗑️ この物件を削除する</button>
+                        <button type="submit" style="padding: 10px 16px; background: #00a0e9; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; width: auto;">保存</button>
+                        <button type="button" onclick="confirmDelete({info['id']}, '{info['name']}')" style="padding: 10px 16px; background: #ff4d4f; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; width: auto;">削除</button>
                     </div>
                 </form>
             </div>
@@ -349,7 +359,7 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
     # ユーザーが admin の場合のみユーザー管理メニューを表示
     user_mgmt_html = ""
     if username == 'admin':
-        user_mgmt_html = "<a href='/admin/users' style=\"margin-left:12px; background:#ffc53d; color:#222; padding:6px 12px; border-radius:4px; text-decoration:none; font-weight:bold;\">ユーザー管理</a>"
+        user_mgmt_html = "<a href='/admin/users' style=\"margin-left:12px; background:#ffc53d; color:#222; padding:6px 12px; border-radius:4px; text-decoration:none; font-weight:bold;\">ユーザ管理</a>"
 
     return f"""
     <html>
@@ -371,7 +381,7 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                 window.location.href = "/admin?current_id=" + pid;
             }}
             function confirmDelete(projId, projName) {{
-                if (confirm("⚠️ 警告: 物件「" + projName + "」を完全に削除しますか？\n登録されているすべてのPDF資料の配置情報も消去されます。")) {{
+                if (confirm("⚠️ 警告: 物件「" + projName + "」を完全に削除しますか？\n登録されているすべ��のPDF資料の配置情報も消去されます。")) {{
                     if (confirm("🚨 本当に本当によろしいですか？\nこの操作は取り消せません。また、物件IDは永久欠番となります。")) {{
                         window.location.href = "/admin/project/delete/" + projId;
                     }}
@@ -446,9 +456,9 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
 
 # 物件の新規作成 API
 @app.post("/admin/create")
-def create_project(name: str = Form(...), start_date: str = Form(...), end_date: str = Form(...), agent: str = Form(...), tel: str = Form(...), location: str = Form(...), loop_seconds: int = Form(...), user_id: int = Form(...), logged_in_user: Optional[int] = Depends(get_current_user_id)):
-    if logged_in_user is None or logged_in_user != user_id:
-        raise HTTPException(status_code=403, detail="Unauthorized")
+def create_project(name: str = Form(...), start_date: str = Form(...), end_date: str = Form(...), agent: str = Form(...), tel: str = Form(...), location: str = Form(...), loop_seconds: int = Form(...), user_id: Optional[int] = Depends(get_current_user_id)):
+    if user_id is None:
+        return RedirectResponse(url="/login", status_code=303)
     
     # 🔒 新規物件作成時に、暗号論的に強固なユニークトークンを自動発行
     token = secrets.token_hex(20)
@@ -667,7 +677,7 @@ def admin_users(user_id: Optional[int] = Depends(get_current_user_id)):
         # プロジェクト数をカウント
         cursor.execute("SELECT COUNT(*) FROM projects WHERE user_id = ?", (uid,))
         cnt = cursor.fetchone()[0]
-        delete_btn = "" if uname == 'admin' else f"<a href='/admin/users/delete/{uid}' style='color:red;' onclick=\"return confirm('このユーザーを削除しますか？\n関連する物件情報も同時に削除されます。');\">削除</a>"
+        delete_btn = "" if uname == 'admin' else f"<a href='/admin/users/delete/{uid}' style='color:red;' onclick=\"return confirm('このユーザーを削除しますか？\n関連する物件情報も削除されます。')\">削除</a>"
         users_html += f"<tr><td>{uid}</td><td>{uname}</td><td>{cnt}</td><td>{delete_btn}</td></tr>"
 
     conn.close()
@@ -780,3 +790,4 @@ if __name__ == "__main__":
     import uvicorn
     # AWS本番デプロイ時を考慮して、全てのIPからの接続(0.0.0.0)を受け付け可能に変更
     uvicorn.run(app, host="0.0.0.0", port=8000)
+    
