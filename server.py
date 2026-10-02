@@ -172,8 +172,9 @@ async def get_current_user_id(request: Request) -> Optional[int]:
 
 # 🔒 ログイン画面の表示
 @app.get("/login", response_class=HTMLResponse)
-def login_page(error: Optional[str] = None):
+def login_page(error: Optional[str] = None, message: Optional[str] = None):
     error_msg = f"<p style='color:red;'>{error}</p>" if error else ""
+    info_msg = f"<p style='color:green;'>{message}</p>" if message else ""
     return f"""
     <html>
     <head>
@@ -189,11 +190,15 @@ def login_page(error: Optional[str] = None):
         <div class="login-box">
             <h2>🏢 ログイン</h2>
             {error_msg}
+            {info_msg}
             <form action="/login" method="post">
                 <input type="text" name="username" placeholder="ユーザーID" required>
                 <input type="password" name="password" placeholder="パスワード" required>
                 <button type="submit">ログイン</button>
             </form>
+            <div style="margin-top:12px; text-align:center; font-size:13px;">
+                <a href="/change-password">パスワードを変更する</a>
+            </div>
         </div>
     </body>
     </html>
@@ -286,7 +291,7 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                 <!-- 📋 コピペ専用ブロック（ここを追加） -->
                 <div style="background:#fffbe6; padding:12px; border-radius:6px; margin-bottom:15px; border:1px solid #ffe58f; font-size:13px; color:#555;">
                     📌 <b>この現場のサイネージPC起動コマンド</b>（バッチファイル作成時にそのままコピー＆ペーストしてください）
-                    <textarea readonly style="width:100%; height:45px; background:#fff; margin-top:6px; padding:6px; font-family:monospace; font-size:12px; border:1px solid #ccc; border-radius:4px; resize:none; font-weight:bold; color:#000;" onclick="this.select();">signage_app.exe --id {info['id']} --token {info['signage_token']} --server {SERVER_PUBLIC_IP}:8000 --kiosk</textarea>
+                    <textarea readonly style="width:100%; height:45px; background:#fff; margin-top:6px; padding:6px; font-family:monospace; font-size:12px; border:1px solid #ccc; border-radius:4px;">start /B python signage_client.py --project {info['id']} --token {info['signage_token']}</textarea>
                     <span style="font-size:11px; color:#888;">※枠内をクリックすると全選択されます。</span>
                 </div>
 
@@ -300,8 +305,8 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                     <div>ループ切替:</div><div><input type="number" name="loop_seconds" value="{info['loop_seconds']}" style="width:80px;"> 秒</div>
                     <div></div>
                     <div style="display: flex; gap: 12px; align-items: center; width: max-content;">
-                        <button type="submit" style="padding: 10px 16px; background: #00a0e9; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; white-space: nowrap;">この物件の設定を保存</button>
-                        <a href="/admin/project/delete/{info['id']}" onclick="return confirm('🚨 本当に物件を完全削除しますか？中身のPDFもすべて消去され、元に戻せません。')" style="padding: 10px 16px; background: #ff4d4f; color: #fff; border-radius: 4px; text-decoration:none; font-weight: bold; font-size: 14px; white-space: nowrap;">🚨 この物件を削除する</a>
+                        <button type="submit" style="padding: 10px 16px; background: #00a0e9; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; width:160px;">変更を保存</button>
+                        <a href="/admin/project/delete/{info['id']}" onclick="return confirm('🚨 本当に物件を完全削除しますか？中身のPDFもすべて消去され、元に戻せません。')" style="color:#ff4d4f; font-weight:bold;">完全削除</a>
                     </div>
                 </form>
             </div>
@@ -314,7 +319,7 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
             <div class="grid">
                 <div class="col">
                     <h4>【左】A4区画（作業内容等）</h4>
-                    <div class="drop-zone" id="dz-a4_left">ここにPDFをドラッグ＆ドロップ<br><span style="font-size:12px; color:#666;">（またはクリックしてファイル選択）</span></div>
+                    <div class="drop-zone" id="dz-a4_left">ここにPDFをドラッグ＆ドロップ<br><span style="font-size:12px; color:#666;">（またはクリックしてファイル選択）</div>
                     <form id="form-a4_left" action="/admin/upload/{info['id']}/a4_left" method="post" enctype="multipart/form-data">
                         <input type="file" id="file-a4_left" name="file" accept=".pdf" onchange="document.getElementById('form-a4_left').submit();" style="display:none;">
                     </form>
@@ -322,7 +327,7 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                 </div>
                 <div class="col">
                     <h4>【中央】A3区画（お知らせ図面等）</h4>
-                    <div class="drop-zone" id="dz-a3">ここにPDFをドラッグ＆ドロップ<br><span style="font-size:12px; color:#666;">（またはクリックしてファイル選択）</span></div>
+                    <div class="drop-zone" id="dz-a3">ここにPDFをドラッグ＆ドロップ<br><span style="font-size:12px; color:#666;">（またはクリックしてファイル選択）</div>
                     <form id="form-a3" action="/admin/upload/{info['id']}/a3" method="post" enctype="multipart/form-data">
                         <input type="file" id="file-a3" name="file" accept=".pdf" onchange="document.getElementById('form-a3').submit();" style="display:none;">
                     </form>
@@ -330,7 +335,7 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                 </div>
                 <div class="col">
                     <h4>【右】A4区画（洗濯物情報等）</h4>
-                    <div class="drop-zone" id="dz-a4_right">ここにPDFをドラッグ＆ドロップ<br><span style="font-size:12px; color:#666;">（またはクリックしてファイル選択）</span></div>
+                    <div class="drop-zone" id="dz-a4_right">ここにPDFをドラッグ＆ドロップ<br><span style="font-size:12px; color:#666;">（またはクリックしてファイル選択）</div>
                     <form id="form-a4_right" action="/admin/upload/{info['id']}/a4_right" method="post" enctype="multipart/form-data">
                         <input type="file" id="file-a4_right" name="file" accept=".pdf" onchange="document.getElementById('form-a4_right').submit();" style="display:none;">
                     </form>
@@ -340,6 +345,11 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
         </div>
         <p><a href="/mobile/{info['id']}" target="_blank">📱 この物件のスマホ用画面（デモ用）を開く</a></p>
         """
+
+    # ユーザーが admin の場合のみユーザー管理メニューを表示
+    user_mgmt_html = ""
+    if username == 'admin':
+        user_mgmt_html = "<a href='/admin/users' style=\"margin-left:12px; background:#ffc53d; color:#222; padding:6px 12px; border-radius:4px; text-decoration:none; font-weight:bold;\">ユーザー管理</a>"
 
     return f"""
     <html>
@@ -361,8 +371,8 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                 window.location.href = "/admin?current_id=" + pid;
             }}
             function confirmDelete(projId, projName) {{
-                if (confirm("⚠️ 警告: 物件「" + projName + "」を完全に削除しますか？\\n登録されているすべてのPDF資料の配置情報も消去されます。")) {{
-                    if (confirm("🚨 本当に本当によろしいですか？\\nこの操作は取り消せません。また、物件IDは永久欠番となります。")) {{
+                if (confirm("⚠️ 警告: 物件「" + projName + "」を完全に削除しますか？\n登録されているすべてのPDF資料の配置情報も消去されます。")) {{
+                    if (confirm("🚨 本当に本当によろしいですか？\nこの操作は取り消せません。また、物件IDは永久欠番となります。")) {{
                         window.location.href = "/admin/project/delete/" + projId;
                     }}
                 }}
@@ -378,6 +388,7 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                 <select onchange="switchProject(this.value)" style="width:300px; display:inline-block;">
                     {options_html}
                 </select>
+                {user_mgmt_html}
                 <a href="/logout" class="logout-btn" style="margin-left:15px;">ログアウト</a>
             </div>
         </div>
@@ -396,7 +407,7 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                     <div>連絡先TEL:</div><div><input type="text" name="tel" placeholder="090-0000-0000"></div>
                     <div>物件所在地:</div><div><input type="text" name="location" placeholder="福岡県博多区"></div>
                     <div>ループ切替:</div><div><input type="number" name="loop_seconds" value="5" style="width:80px;"> 秒</div>
-                    <div></div><div><button type="submit" style="padding:10px 20px; background:#52c41a; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">新規物件を作成</button></div>
+                    <div></div><div><button type="submit" style="padding:10px 20px; background:#52c41a; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">新規物件作成</button></div>
                 </form>
             </div>
         </div>
@@ -430,7 +441,6 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
     </body>
     </html>
     """
-
 
 
 
@@ -570,8 +580,203 @@ def delete_project_completely(project_id: int, user_id: Optional[int] = Depends(
     return RedirectResponse(url="/admin", status_code=303)
 
 
+# ------------------ ここから追加機能: パスワード変更 と ユーザー管理 ------------------
+
+# パスワード変更画面（ログイン画面からもアクセス可能）
+@app.get("/change-password", response_class=HTMLResponse)
+def change_password_page(error: Optional[str] = None, message: Optional[str] = None):
+    error_msg = f"<p style='color:red;'>{error}</p>" if error else ""
+    info_msg = f"<p style='color:green;'>{message}</p>" if message else ""
+    return f"""
+    <html>
+    <head>
+        <title>パスワード変更</title>
+        <style>
+            body {{ font-family:sans-serif; background:#fafafa; display:flex; justify-content:center; align-items:center; height:100vh; margin:0; }}
+            .box {{ background:#fff; padding:30px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1); width:380px; }}
+            input {{ width:100%; padding:10px; margin:8px 0; border:1px solid #ccc; border-radius:4px; box-sizing:border-box; }}
+            button {{ width:100%; padding:10px; background:#00a0e9; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold; }}
+        </style>
+    </head>
+    <body>
+        <div class="box">
+            <h2>🔐 パスワード変更</h2>
+            {error_msg}
+            {info_msg}
+            <form action="/change-password" method="post">
+                <input type="text" name="username" placeholder="ユーザーID" required>
+                <input type="password" name="current_password" placeholder="現在のパスワード" required>
+                <input type="password" name="new_password" placeholder="新しいパスワード" required>
+                <input type="password" name="new_password_confirm" placeholder="新しいパスワード（確認）" required>
+                <button type="submit">パスワードを変更する</button>
+            </form>
+            <div style="margin-top:10px; text-align:center;"><a href="/login">ログイン画面へ戻る</a></div>
+        </div>
+    </body>
+    </html>
+    """
+
+@app.post("/change-password")
+def change_password(username: str = Form(...), current_password: str = Form(...), new_password: str = Form(...), new_password_confirm: str = Form(...)):
+    if new_password != new_password_confirm:
+        return RedirectResponse(url="/change-password?error=新しいパスワードと確認が一致しません。", status_code=303)
+
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
+    user = cursor.fetchone()
+    if not user:
+        conn.close()
+        return RedirectResponse(url="/change-password?error=該当するユーザーが見つかりません。", status_code=303)
+
+    if not pwd_context.verify(current_password, user["hashed_password"]):
+        conn.close()
+        return RedirectResponse(url="/change-password?error=現在のパスワードが違います。", status_code=303)
+
+    # パスワード更新
+    new_hash = pwd_context.hash(new_password)
+    cursor.execute("UPDATE users SET hashed_password = ? WHERE id = ?", (new_hash, user["id"]))
+    conn.commit()
+    conn.close()
+    return RedirectResponse(url="/login?message=パスワード変更が完了しました。新しいパスワードでログインしてください。", status_code=303)
+
+
+# ユーザー管理画面（adminユーザーのみアクセス可能）
+@app.get("/admin/users", response_class=HTMLResponse)
+def admin_users(user_id: Optional[int] = Depends(get_current_user_id)):
+    if user_id is None:
+        return RedirectResponse(url="/login", status_code=303)
+
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT username FROM users WHERE id = ?", (user_id,))
+    row = cursor.fetchone()
+    username = row[0] if row else None
+    if username != 'admin':
+        conn.close()
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    cursor.execute("SELECT id, username FROM users ORDER BY id ASC")
+    users = cursor.fetchall()
+    users_html = ""
+    for u in users:
+        uid = u['id']
+        uname = u['username']
+        # プロジェクト数をカウント
+        cursor.execute("SELECT COUNT(*) FROM projects WHERE user_id = ?", (uid,))
+        cnt = cursor.fetchone()[0]
+        delete_btn = "" if uname == 'admin' else f"<a href='/admin/users/delete/{uid}' style='color:red;' onclick=\"return confirm('このユーザーを削除しますか？\n関連する物件は残ります。')\">削除</a>"
+        users_html += f"<tr><td>{uid}</td><td>{uname}</td><td>{cnt}</td><td>{delete_btn}</td></tr>"
+
+    conn.close()
+    return f"""
+    <html>
+    <head>
+        <title>ユーザー管理</title>
+        <style>
+            body {{ font-family:sans-serif; padding:20px; background:#fafafa; color:#333; }}
+            table {{ border-collapse:collapse; width:100%; background:#fff; }}
+            th, td {{ border:1px solid #eee; padding:8px; text-align:left; }}
+            .section {{ background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-bottom:20px; }}
+            input {{ padding:8px; margin:6px 0; width:100%; box-sizing:border-box; }}
+            button {{ padding:8px 12px; background:#00a0e9; color:#fff; border:none; border-radius:4px; cursor:pointer; }}
+        </style>
+    </head>
+    <body>
+        <h2>ユーザー管理 (admin)</h2>
+        <div class="section">
+            <h3>登録ユーザー一覧</h3>
+            <table>
+                <tr><th>ID</th><th>ユーザー名</th><th>登録済み物件数</th><th>操作</th></tr>
+                {users_html}
+            </table>
+        </div>
+        <div class="section">
+            <h3>新しいユーザーを追加</h3>
+            <form action="/admin/users/create" method="post" style="max-width:400px;">
+                <label>ユーザー名</label>
+                <input type="text" name="username" required>
+                <label>パスワード</label>
+                <input type="password" name="password" required>
+                <label>パスワード（確認）</label>
+                <input type="password" name="password_confirm" required>
+                <div style="margin-top:8px;"><button type="submit">ユーザー作成</button></div>
+            </form>
+        </div>
+        <div><a href="/admin">管理画面に戻る</a></div>
+    </body>
+    </html>
+    """
+
+
+@app.post("/admin/users/create")
+def admin_users_create(username: str = Form(...), password: str = Form(...), password_confirm: str = Form(...), user_id: Optional[int] = Depends(get_current_user_id)):
+    if user_id is None:
+        return RedirectResponse(url="/login", status_code=303)
+
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT username FROM users WHERE id = ?", (user_id,))
+    row = cursor.fetchone()
+    uname = row[0] if row else None
+    if uname != 'admin':
+        conn.close()
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    if password != password_confirm:
+        conn.close()
+        return RedirectResponse(url="/admin/users?error=パスワードが一致しません。", status_code=303)
+
+    # ユーザー名の重複チェック
+    cursor.execute("SELECT COUNT(*) FROM users WHERE username = ?", (username,))
+    if cursor.fetchone()[0] > 0:
+        conn.close()
+        return RedirectResponse(url="/admin/users?error=そのユーザー名は既に使われています。", status_code=303)
+
+    hashed = pwd_context.hash(password)
+    cursor.execute("INSERT INTO users (username, hashed_password) VALUES (?, ?)", (username, hashed))
+    conn.commit()
+    conn.close()
+    return RedirectResponse(url="/admin/users", status_code=303)
+
+
+@app.get("/admin/users/delete/{target_user_id}")
+def admin_users_delete(target_user_id: int, user_id: Optional[int] = Depends(get_current_user_id)):
+    if user_id is None:
+        return RedirectResponse(url="/login", status_code=303)
+
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT username FROM users WHERE id = ?", (user_id,))
+    row = cursor.fetchone()
+    uname = row[0] if row else None
+    if uname != 'admin':
+        conn.close()
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    # 対象ユーザーが admin の場合は削除不可
+    cursor.execute("SELECT username FROM users WHERE id = ?", (target_user_id,))
+    targ = cursor.fetchone()
+    if not targ:
+        conn.close()
+        return RedirectResponse(url="/admin/users?error=ユーザーが見つかりません。", status_code=303)
+    if targ[0] == 'admin':
+        conn.close()
+        return RedirectResponse(url="/admin/users?error=admin ユーザーは削除できません。", status_code=303)
+
+    cursor.execute("DELETE FROM users WHERE id = ?", (target_user_id,))
+    conn.commit()
+    conn.close()
+    return RedirectResponse(url="/admin/users", status_code=303)
+
+
+# ------------------ ここまで追加機能 ------------------
+
 if __name__ == "__main__":
     import uvicorn
     # AWS本番デプロイ時を考慮して、全てのIPからの接続(0.0.0.0)を受け付け可能に変更
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
