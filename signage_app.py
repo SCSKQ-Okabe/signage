@@ -9,6 +9,24 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QLabel, QTable
 from PySide6.QtGui import QPixmap, QImage, QFont, QColor
 from datetime import datetime
 
+WEEKDAY_JA = ["日", "月", "火", "水", "木", "金", "土"]
+
+
+def format_ja_date_with_weekday(date_value):
+    """入力された日付文字列から、曜日付きの日本語表記を返す。"""
+    if date_value is None:
+        return ""
+
+    for fmt in ("%Y-%m-%d", "%Y年%m月%d日"):
+        try:
+            dt = datetime.strptime(str(date_value), fmt)
+            return dt.strftime(f"%Y年%m月%d日 ({WEEKDAY_JA[dt.weekday()]})")
+        except ValueError:
+            continue
+
+    return str(date_value)
+
+
 class SignageWindow(QMainWindow):
     def __init__(self, project_id, token, is_kiosk, server_url):
         super().__init__()
@@ -222,23 +240,14 @@ class SignageWindow(QMainWindow):
             url_address = self.server_url
             response = requests.get(f"http://{url_address}/api/signage-data/{self.project_id}?token={self.token}", timeout=2)
 
-
             if response.status_code == 200:
                 self.server_data = response.json()
                 
                 self.lbl_obj_name.setText(self.server_data["name"])
-                # 2026年09月26日(土)のように、サーバーの曜日に合わせて動的表示する場合は適宜調整
-                self.lbl_date.setText(f"{self.server_data['today_str']} (土)") 
+                self.lbl_date.setText(format_ja_date_with_weekday(self.server_data.get("today_str")))
                 
-                def format_to_ja_date(date_str, weekday_ja):
-                    try:
-                        dt = datetime.strptime(date_str, "%Y-%m-%d")
-                        return dt.strftime(f"%Y年%m月%d日 ({weekday_ja})")
-                    except:
-                        return f"{date_str} ({weekday_ja})"
-
-                start_ja = format_to_ja_date(self.server_data['start_date'], "火")
-                end_ja = format_to_ja_date(self.server_data['end_date'], "日")
+                start_ja = format_ja_date_with_weekday(self.server_data.get('start_date'))
+                end_ja = format_ja_date_with_weekday(self.server_data.get('end_date'))
 
                 # テーブルのセルの内容を完全にクリアして再マッピング
                 self.info_table.clear()
@@ -274,7 +283,6 @@ class SignageWindow(QMainWindow):
                 if self.loop_timer.interval() != self.server_data['loop_seconds'] * 1000:
                     self.loop_timer.setInterval(self.server_data['loop_seconds'] * 1000)
 
-                
                 self.generate_qr(f"http://{self.server_url}/mobile/{self.project_id}")
                                 
                 self.update_weather(self.server_data["location"])
