@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QLabel, QTable
 from PySide6.QtGui import QPixmap, QImage, QFont, QColor
 from datetime import datetime
 
-WEEKDAY_JA = ["日", "月", "火", "水", "木", "金", "土"]
+WEEKDAY_JA = ["月", "火", "水", "木", "金", "土", "日"]  # weekday()に合わせる
 
 
 def format_ja_date_with_weekday(date_value):
@@ -59,8 +59,6 @@ class SignageWindow(QMainWindow):
             self.resize(1280, 720)
             self.show()
         
-        # 🔒 【修正・最重要】データを取りに行く（fetch）よりも『先』に、
-        # 画面位置と拡大倍率の計算（recalculate_positions）を呼び出してサイズ変数を確定させます！
         self.recalculate_positions()
         
         self.sync_timer = QTimer(self)
@@ -71,7 +69,6 @@ class SignageWindow(QMainWindow):
         self.loop_timer.timeout.connect(self.rotate_pages)
         self.loop_timer.start(5000)
 
-        # 🔒 【修正】サイズ変数が確定した状態（0ではない状態）で、満を持してサーバーからデータを取得・描画します
         self.fetch_server_data()
 
     def init_ui(self):
@@ -79,14 +76,12 @@ class SignageWindow(QMainWindow):
         self.setCentralWidget(self.main_widget)
         self.main_widget.setStyleSheet("background-color: #ffffff;") 
 
-        # 🟢 1. 上部ヘッダー（緑色背景と工事タイトル・日付）
         self.header_container = QWidget(self.main_widget)
         self.header_container.setStyleSheet("background-color: #00a572;") 
         
         self.lbl_obj_name = QLabel("", self.header_container)
         self.lbl_obj_name.setStyleSheet("font-size: 20px; font-weight: bold; color: white; background: transparent;")
         
-        # 【修正】「工事用掲示板」を画面のド中央へ配置
         self.lbl_title = QLabel("工事用掲示板", self.header_container)
         self.lbl_title.setStyleSheet("font-size: 32px; font-weight: bold; color: white; background: transparent;")
         self.lbl_title.setAlignment(Qt.AlignCenter)
@@ -95,7 +90,6 @@ class SignageWindow(QMainWindow):
         self.lbl_date.setStyleSheet("font-size: 22px; font-weight: bold; color: white; background: transparent;")
         self.lbl_date.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
-        # 📊 スクロールバーなし・枠線クッキリの格子状テーブル
         self.info_table = QTableWidget(2, 6, self.header_container)
         self.info_table.setStyleSheet("""
             QTableWidget { 
@@ -112,7 +106,6 @@ class SignageWindow(QMainWindow):
         self.info_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.info_table.setFocusPolicy(Qt.NoFocus)
 
-        # 🔵 2. 中央：3区画表示エリア（左から A4左 ➔ A3 ➔ A4右）
         self.area_a4_l = QLabel("A4左", self.main_widget)
         self.area_a4_l.setStyleSheet("background-color: #ffffff; border: 2px solid #00a572;")
         self.area_a4_l.setAlignment(Qt.AlignCenter)
@@ -125,7 +118,6 @@ class SignageWindow(QMainWindow):
         self.area_a4_r.setStyleSheet("background-color: #ffffff; border: 2px solid #00a572;")
         self.area_a4_r.setAlignment(Qt.AlignCenter)
 
-        # 🟡 3. 下部フッターパーツ
         self.lbl_koujichu = QLabel(self.main_widget)
         self.lbl_koujichu.setAlignment(Qt.AlignCenter)
         if os.path.exists("koujichu.png"):
@@ -172,12 +164,11 @@ class SignageWindow(QMainWindow):
         self.lbl_date.setGeometry(win_w - int(300 * scale) - margin, int(12 * scale), int(300 * scale), int(35 * scale))
         self.lbl_date.setStyleSheet(f"font-size: {int(22 * scale)}px; font-weight: bold; color: white; background: transparent;")
 
-        # テーブルのサイズ設定（2行5列）
         table_w = win_w - (margin * 2)
         table_h = int(106 * scale)
         self.info_table.setGeometry(margin, int(55 * scale), table_w, table_h)
-        self.info_table.setColumnCount(5) # 5列に厳密固定
-        self.info_table.setRowCount(2)    # 2行に厳密固定
+        self.info_table.setColumnCount(5)
+        self.info_table.setRowCount(2)
         
         self.info_table.setStyleSheet(f"""
             QTableWidget {{ 
@@ -186,12 +177,11 @@ class SignageWindow(QMainWindow):
             }}
         """)
         
-        # 🔒 【重要】5つの列の横幅（ピクセル数）を正確に割り振り
-        w_col0 = int(table_w * 0.14)  # 「工期」ラベル列
-        w_col1 = int(table_w * 0.14)  # 「着工」「完工」ラベル列
-        w_col2 = int(table_w * 0.25)  # 日付（値）列
-        w_col3 = int(table_w * 0.18)  # 「現場代理人」「連絡先」ラベル列
-        w_col4 = table_w - (w_col0 + w_col1 + w_col2 + w_col3) - 4 # 残りすべてを「代理人名・TEL（値）」列へ
+        w_col0 = int(table_w * 0.14)
+        w_col1 = int(table_w * 0.14)
+        w_col2 = int(table_w * 0.25)
+        w_col3 = int(table_w * 0.18)
+        w_col4 = table_w - (w_col0 + w_col1 + w_col2 + w_col3) - 4
         
         self.info_table.setColumnWidth(0, w_col0)
         self.info_table.setColumnWidth(1, w_col1)
@@ -202,7 +192,6 @@ class SignageWindow(QMainWindow):
         self.info_table.setRowHeight(0, int(51 * scale))
         self.info_table.setRowHeight(1, int(51 * scale))
 
-        # （以降のフッター・中央3区画の配置処理は変更なしのため省略）
         footer_h = int(120 * scale)
         footer_y = win_h - footer_h - margin
         self.lbl_koujichu.setGeometry(margin, footer_y, int(110 * scale), footer_h)
@@ -253,36 +242,26 @@ class SignageWindow(QMainWindow):
                 start_ja = format_ja_date_with_weekday(self.server_data.get('start_date'))
                 end_ja = format_ja_date_with_weekday(self.server_data.get('end_date'))
 
-                # テーブルのセルの内容を完全にクリアして再マッピング
                 self.info_table.clear()
                 
-                # 🔒 スケール倍率に応じたフォントサイズ調整
                 scale = self.height() / 720.0
                 f_size = max(11, int(14 * scale))
                 f_size_large = max(13, int(16 * scale))
 
-                # 0列目：【工期】セルを縦に2マス結合 ➔ 薄いグレー背景
                 self.info_table.setSpan(0, 0, 2, 1)
                 self.set_cell_style(0, 0, "工　　期", is_bold=True, font_size=f_size_large, bg_color="#e6e6e6", is_center=True)
                 
-                # 1列目：【着工】【完工】の項目ラベル ➔ 薄いグレー背景
                 self.set_cell_style(0, 1, "着工", is_bold=True, font_size=f_size, bg_color="#e6e6e6", is_center=True)
                 self.set_cell_style(1, 1, "完工", is_bold=True, font_size=f_size, bg_color="#e6e6e6", is_center=True)
                 
-                # 2列目：日付データ ➔ 白背景（コロン記号から表記）
                 self.set_cell_style(0, 2, f"： {start_ja}", is_bold=True, font_size=f_size, bg_color="#ffffff")
                 self.set_cell_style(1, 2, f"： {end_ja}", is_bold=True, font_size=f_size, bg_color="#ffffff")
                 
-                # 🔒 【修正】すべてのセルへの書き込みを新関数に統一し、プログラムの内部クラッシュを解消
-                # 3列目：【現場代理人】【連絡先】の項目ラベル ➔ 薄いグレー背景
                 self.set_cell_style(0, 3, "現場代理人", is_bold=True, font_size=f_size, bg_color="#e6e6e6", is_center=True)
                 self.set_cell_style(1, 3, "連  絡  先", is_bold=True, font_size=f_size, bg_color="#e6e6e6", is_center=True)
                 
-                # 4列目：代理人名・TELデータ ➔ 白背景
                 self.set_cell_style(0, 4, f" {self.server_data['agent']}", is_bold=True, font_size=f_size, bg_color="#ffffff")
                 self.set_cell_style(1, 4, f" {self.server_data['tel']}", is_bold=True, font_size=f_size, bg_color="#ffffff")
-                
-                # （※この後に混ざっていた古いsetItem処理を完全に削除しました）
                 
                 if self.loop_timer.interval() != self.server_data['loop_seconds'] * 1000:
                     self.loop_timer.setInterval(self.server_data['loop_seconds'] * 1000)
@@ -303,13 +282,12 @@ class SignageWindow(QMainWindow):
         item = QTableWidgetItem(text)
         item.setFont(QFont("sans-serif", font_size, QFont.Bold if is_bold else QFont.Normal))
         item.setForeground(Qt.black)
-        item.setBackground(QColor(bg_color)) # 背景色塗りつぶし設定
+        item.setBackground(QColor(bg_color))
         item.setTextAlignment(Qt.AlignCenter if is_center else Qt.AlignLeft | Qt.AlignVCenter)
         self.info_table.setItem(row, col, item)
 
     def generate_qr(self, url):
         """指定のURLからQRコード画像を生成し、テキストの枠線を完全排除して余白を持たせる"""
-        # 1. QRコードの画像生成
         qr = qrcode.QRCode(box_size=2, border=0)
         qr.add_data(url)
         qr.make(fit=True)
@@ -320,7 +298,6 @@ class SignageWindow(QMainWindow):
         qpix = QPixmap()
         qpix.loadFromData(img_byte_arr.getvalue())
         
-        # 2. QRコード画像単体の黒枠を消し、白背景にして余白を作る
         self.qr_container.setStyleSheet("border: none; background-color: #ffffff;")
         self.qr_img_label.setStyleSheet("border: 2px solid #000000; background-color: #ffffff;")
         
@@ -329,7 +306,6 @@ class SignageWindow(QMainWindow):
         if target_w > 0 and target_h > 0:
             self.qr_img_label.setPixmap(qpix.scaled(target_w, target_h, Qt.KeepAspectRatio, Qt.SmoothTransformation))
             
-        # 3. 🔒 【修正】説明テキスト部分の背景と枠線を完全排除（オープンな白地に文字だけにする）
         self.qr_text_label.setStyleSheet("border: none; font-size: 14px; font-weight: bold; color: #000000; background-color: #ffffff;")
 
     def update_weather(self, location_name):
@@ -338,7 +314,6 @@ class SignageWindow(QMainWindow):
     def download_missing_files(self, sub_folder, file_list):
         if not self.server_data: return
 
-        # --- 1. 新しいファイルのダウンロード処理（既存通り） ---
         for filename in file_list:
             local_path = os.path.join("signage_storage", str(self.project_id), sub_folder, filename)
             if not os.path.exists(local_path):
@@ -350,13 +325,10 @@ class SignageWindow(QMainWindow):
                         with open(local_path, "wb") as f: f.write(res.content)
                 except Exception: pass
 
-        # --- 2. 【追加】不要になったローカルファイルの自動削除処理 ---
         local_folder = os.path.join("signage_storage", str(self.project_id), sub_folder)
         if os.path.exists(local_folder):
             for local_file in os.listdir(local_folder):
-                # PDFファイルのみを対象とする
                 if local_file.lower().endswith('.pdf'):
-                    # サーバーの最新リストに含まれていない場合は削除
                     if local_file not in file_list:
                         try:
                             os.remove(os.path.join(local_folder, local_file))
@@ -371,10 +343,8 @@ class SignageWindow(QMainWindow):
             doc = pymupdf.open(pdf_path)
             if len(doc) == 0: return
             
-            # 🔒 【修正・最重要】doc から明確に「0番目のページ（最初の1ページ）」をロードします
             page = doc.load_page(0) 
             
-            # ページから画像（ピックスマップ）を展開
             pix = page.get_pixmap(matrix=pymupdf.Matrix(2.0, 2.0))
             
             qimg = QImage(pix.samples, pix.width, pix.height, pix.stride, QImage.Format_RGB888)
@@ -396,55 +366,44 @@ class SignageWindow(QMainWindow):
         """各区画のPDF表示を最新の状態に更新（現場IDフォルダ完全連動版）"""
         if not self.server_data: return
         
-        # A4左区画（作業内容など）
         d_a4_l = self.server_data["docs_a4_left"]
         if d_a4_l:
             if self.idx_a4_l >= len(d_a4_l): self.idx_a4_l = 0
-            # 🔒 【修正】読み込み元フォルダパスに現場IDを挟み込みます
             path = os.path.join("signage_storage", str(self.project_id), "a4_left", d_a4_l[self.idx_a4_l])
             self.render_pdf_page(path, self.area_a4_l, self.w_a4_l, self.target_height)
         else: 
             self.area_a4_l.setPixmap(QPixmap()); self.area_a4_l.setText("資料なし")
 
-        # A3区画（中央：図面など）
         d_a3 = self.server_data["docs_a3"]
         if d_a3:
             if self.idx_a3 >= len(d_a3): self.idx_a3 = 0
-            # 🔒 【修正】読み込み元フォルダパスに現場IDを挟み込みます
             path = os.path.join("signage_storage", str(self.project_id), "a3", d_a3[self.idx_a3])
             self.render_pdf_page(path, self.area_a3, self.w_a3, self.target_height)
         else: 
             self.area_a3.setPixmap(QPixmap()); self.area_a3.setText("資料なし")
 
-        # A4右区画（洗濯物情報など）
         d_a4_r = self.server_data["docs_a4_right"]
         if d_a4_r:
             if self.idx_a4_r >= len(d_a4_r): self.idx_a4_r = 0
-            # 🔒 【修正】読み込み元フォルダパスに現場IDを挟み込みます
             path = os.path.join("signage_storage", str(self.project_id), "a4_right", d_a4_r[self.idx_a4_r])
             self.render_pdf_page(path, self.area_a4_r, self.w_a4_r, self.target_height)
         else: 
             self.area_a4_r.setPixmap(QPixmap()); self.area_a4_r.setText("資料なし")
         self.main_widget.update()
 
-    # 🔒 【新規追加】キオスクモード時の専用終了イベントロジック
     def keyPressEvent(self, event):
         """キーボードの入力を監視し、EscキーまたはCtrl+Qでアプリを安全に終了させる"""
-        # 1. Escキーが押されたら終了
         if event.key() == Qt.Key_Escape:
             self.close()
-            
-        # 2. Ctrlキーを押しながら「Q」が押されたら終了
         elif event.modifiers() == Qt.ControlModifier and event.key() == Qt.Key_Q:
             self.close()
-            
         else:
             super().keyPressEvent(event)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="コンタクトボード サイネージクライアント")
     parser.add_argument("--id", type=int, default=1, help="物件ID（現場ID）を指定します")
-    parser.add_argument("--token", type=str, required=True, help="セキュリティ認証用トークンを指定します") # 🔒 必須引数として追加
+    parser.add_argument("--token", type=str, required=True, help="セキュリティ認証用トークンを指定します")
     parser.add_argument("--kiosk", action="store_true", help="有効にすると全画面最前面で起動します")
     parser.add_argument("--server", type=str, default="127.0.0.1:8000", help="接続先IPアドレスまたはドメイン（例: 13.196.186.120:8000）")
     args = parser.parse_args()
