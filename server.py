@@ -190,7 +190,7 @@ def login_page(error: Optional[str] = None, message: Optional[str] = None):
     return f"""
     <html>
     <head>
-        <title>ログイン - コンタクトボード</title>
+        <title>ログイン - サイネージ管理システム</title>
         <style>
             body {{ font-family:sans-serif; background:#fafafa; display:flex; justify-content:center; align-items:center; height:100vh; margin:0; }}
             .login-box {{ background:#fff; padding:40px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1); width:320px; }}
@@ -366,7 +366,7 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
     return f"""
     <html>
     <head>
-        <title>コンタクトボード 複数拠点一元管理システム</title>
+        <title>サイネージ管理システム</title>
         <style>
             body {{ font-family:sans-serif; padding:20px; background:#fafafa; color:#333; }}
             .section {{ background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-bottom:20px; }}
