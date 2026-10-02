@@ -1,5 +1,6 @@
 import sys
 import os
+import re
 import argparse 
 import requests
 import pymupdf
@@ -17,9 +18,12 @@ def format_ja_date_with_weekday(date_value):
     if date_value is None:
         return ""
 
+    text = str(date_value).strip()
+    text = re.sub(r"\s*\([^)]*\)$", "", text)
+
     for fmt in ("%Y-%m-%d", "%Y年%m月%d日"):
         try:
-            dt = datetime.strptime(str(date_value), fmt)
+            dt = datetime.strptime(text, fmt)
             return dt.strftime(f"%Y年%m月%d日 ({WEEKDAY_JA[dt.weekday()]})")
         except ValueError:
             continue
