@@ -5,6 +5,7 @@ from fastapi import FastAPI, Form, UploadFile, File, Depends, HTTPException, sta
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from datetime import datetime
+from dateutil import parser as date_parser
 from passlib.context import CryptContext
 from typing import Optional
 from fastapi import Request
@@ -45,7 +46,8 @@ def get_ec2_public_ip() -> str:
 SERVER_PUBLIC_IP = get_ec2_public_ip()
 
 # 🟢 【修正】日本語曜日配列
-WEEKDAY_JA = ["日", "月", "火", "水", "木", "金", "土"]
+WEEKDAY_JA = ["月", "火", "水", "木", "金", "土", "日"]
+
 
 def format_date_with_weekday(date_obj):
     """datetimeオブジェクトから曜日付き日本語表記を生成"""
@@ -301,7 +303,7 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                 <!-- 📋 コピペ専用ブロック（ここを追加） -->
                 <div style="background:#fffbe6; padding:12px; border-radius:6px; margin-bottom:15px; border:1px solid #ffe58f; font-size:13px; color:#555;">
                     📌 <b>この現場のサイネージPC起動コマンド</b>（バッチファイル作成時にそのままコピー＆ペーストしてください）
-                    <textarea readonly style="width:100%; height:45px; background:#fff; margin-top:6px; padding:6px; font-family:monospace; font-size:12px; border:1px solid #ccc; border-radius:4px;" onclick="this.select();">python signage_app.py --id {current_id} --token {info['signage_token']} --kiosk --server {SERVER_PUBLIC_IP}:8000</textarea>
+                    <textarea readonly style="width:100%; height:45px; background:#fff; margin-top:6px; padding:6px; font-family:monospace; font-size:12px; border:1px solid #ccc; border-radius:4px;" onclick="this.select();">signage_app.exe --id {current_id} --token {info['signage_token']} --server 13.114.16.175:8000 --kiosk</textarea>
                     <span style="font-size:11px; color:#888;">※枠内をクリックすると全選択されます。</span>
                 </div>
 
@@ -381,7 +383,7 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                 window.location.href = "/admin?current_id=" + pid;
             }}
             function confirmDelete(projId, projName) {{
-                if (confirm("⚠️ 警告: 物件「" + projName + "」を完全に削除しますか？\n登録されているすべ��のPDF資料の配置情報も消去されます。")) {{
+                if (confirm("⚠️ 警告: 物件「" + projName + "」を完全に削除しますか？\n登録されているすべてのPDF資料の配置情報も消去されます。")) {{
                     if (confirm("🚨 本当に本当によろしいですか？\nこの操作は取り消せません。また、物件IDは永久欠番となります。")) {{
                         window.location.href = "/admin/project/delete/" + projId;
                     }}
