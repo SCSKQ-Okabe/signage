@@ -257,8 +257,10 @@ def get_signage_data(project_id: int, token: str):  # 🔒 引数に token を�
 
 
 # 📝 一元管理画面（🔒 テナンシー制限を追加）
+#@app.get("/admin", response_class=HTMLResponse)
+#def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depends(get_current_user_id)):
 @app.get("/admin", response_class=HTMLResponse)
-def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depends(get_current_user_id)):
+def admin_panel(user_id: Optional[int] = Depends(get_current_user_id), current_id: Optional[int] = None):
     if user_id is None:
         return RedirectResponse(url="/login", status_code=303)
         
@@ -279,7 +281,12 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
         current_id = all_projects[0][0]
         
     info = fetch_project_info(current_id) if current_id else None
-    
+
+    if info:
+        # input[type=date] が認識できる YYYY-MM-DD 形式に変換
+        raw_start = datetime.strptime(info["start_date"].split(" ")[0], "%Y年%m月%d日").strftime("%Y-%m-%d")
+        raw_end = datetime.strptime(info["end_date"].split(" ")[0], "%Y年%m月%d日").strftime("%Y-%m-%d")
+
     # 他のテナントの物件IDをURL直打ちでクラッキングしようとした場合の防御
     if info and info["user_id"] != user_id:
         return "閲覧権限がありません。<a href='/admin'>戻る</a>"
@@ -304,15 +311,15 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                 <div style="background:#fffbe6; padding:12px; border-radius:6px; margin-bottom:15px; border:1px solid #ffe58f; font-size:13px; color:#555;">
                     📌 <b>この現場のサイネージPC起動コマンド</b>（バッチファイル作成時にそのままコピー＆ペーストしてください）
                     <textarea readonly style="width:100%; height:45px; background:#fff; margin-top:6px; padding:6px; font-family:monospace; font-size:12px; border:1px solid #ccc; border-radius:4px;">
-                    python signage_app.py --id {info['id']} --token {info['signage_token']} --server {SERVER_PUBLIC_IP}:8000 --kiosk
+                    signage_app.exe --id {info['id']} --token {info['signage_token']} --server {SERVER_PUBLIC_IP}:8000 --kiosk
                     </textarea>
                     <span style="font-size:11px; color:#888;">※枠内をクリックすると全選択されます。</span>
                 </div>
 
                 <form action="/admin/update/{info['id']}" method="post" class="form-grid">
                     <div>工事・物件名:</div><div><input type="text" name="name" value="{info['name']}"></div>
-                    <div>着工日:</div><div><input type="date" name="start_date" value="{info['start_date'][:10]}"></div>
-                    <div>完工日:</div><div><input type="date" name="end_date" value="{info['end_date'][:10]}"></div>
+                    <div>着工日:</div><div><input type="date" name="start_date" value="{raw_start}"></div>
+                    <div>完工日:</div><div><input type="date" name="end_date" value="{raw_end}"></div>
                     <div>現場代理人:</div><div><input type="text" name="agent" value="{info['agent']}"></div>
                     <div>連絡先TEL:</div><div><input type="text" name="tel" value="{info['tel']}"></div>
                     <div>物件所在地:</div><div><input type="text" name="location" value="{info['location']}"></div>
@@ -320,7 +327,8 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                     <div></div>
                     <div style="display: flex; gap: 12px; align-items: center; width: max-content;">
                         <button type="submit" style="padding: 10px 16px; background: #00a0e9; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; width: 140px;">保存</button>
-                        <button type="button" onclick="confirmDelete({info['id']}, '{info['name']}')" style="padding: 10px 16px; background: #ff4d4f; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; width: 140px;">削除</button>
+                        <a href="/admin/project/delete/{info['id']}" style="display: inline-block; text-align: center; line-height: 20px; padding: 10px 16px; background: #ff4d4f; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; width: 140px; text-decoration: none; box-sizing: border-box;" onclick="if(!confirm('⚠️ 警告: この物件を完全に削除しますか？\\n登録されているすべてのPDF資料も消去されます。')) return false;">削除</a>
+                        <a href="/admin/project/qrcode/{info['id']}" style="display: inline-block; text-align: center; line-height: 20px; padding: 10px 16px; background: #52c41a; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; width: 140px; text-decoration: none; box-sizing: border-box;">QRコード</a>
                     </div>
                 </form>
             </div>
@@ -361,6 +369,13 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
         """
 
     # ユーザーが admin の場合のみユーザー管理メニューを表示
+    #function confirmDelete(projId) {{
+    #                if (confirm("⚠️ 警告: この物件を完全に削除しますか？\n登録されているすべてのPDF資料の配置情報も消去されます。")) {{
+    #                    if (confirm("🚨 本当に本当によろしいですか？\nこの操作は取り消せません。")) {{
+    #                        window.location.href = "/admin/project/delete/" + projId;
+    #                    }}
+    #                }}
+    #            }}
     user_mgmt_html = ""
     if username == 'admin':
         user_mgmt_html = "<a href='/admin/users' style=\"margin-left:12px; background:#ffc53d; color:#222; padding:6px 12px; border-radius:4px; text-decoration:none; font-weight:bold;\">ユーザー管理</a>"
@@ -384,13 +399,9 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
             function switchProject(pid) {{
                 window.location.href = "/admin?current_id=" + pid;
             }}
-            function confirmDelete(projId, projName) {{
-                if (confirm("⚠️ 警告: 物件「" + projName + "」を完全に削除しますか？\n登録されているすべてのPDF資料の配置情報も消去されます。")) {{
-                    if (confirm("🚨 本当に本当によろしいですか？\nこの操作は取り消せません。また、物件IDは永久欠番となります。")) {{
-                        window.location.href = "/admin/project/delete/" + projId;
-                    }}
-                }}
-            }}
+            
+
+
         </script>
     </head>
     <body>
@@ -399,9 +410,10 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
             <h2>🏢 拠点一元管理ダッシュボード <span style="font-size:14px; font-weight:normal; color:#ccc;">(ユーザー: {username})</span></h2>
             <div>
                 <span>🔍 管理対象の物件を選択：</span>
-                <select onchange="switchProject(this.value)" style="width:300px; display:inline-block;">
+                <select id="project-selector" onchange="window.location.href='/admin?current_id='+this.value;" style="width:300px; display:inline-block;">
                     {options_html}
                 </select>
+
                 {user_mgmt_html}
                 <a href="/logout" class="logout-btn" style="margin-left:15px;">ログアウト</a>
             </div>
@@ -787,6 +799,39 @@ def admin_users_delete(target_user_id: int, user_id: Optional[int] = Depends(get
     conn.close()
     return RedirectResponse(url="/admin/users", status_code=303)
 
+# 🟢 【修正】サイネージアプリ（qrcodeライブラリ）と完全に同じ処理でPNG画像を内部生成して返す関数
+from fastapi.responses import StreamingResponse
+import io
+import qrcode  # 👈 サイネージアプリと同じライブラリを使用
+
+@app.get("/admin/project/qrcode/{project_id}")
+def download_project_qrcode(project_id: int):
+    # 対象物件のスマートフォンサイト用URLを作成
+    target_url = f"http://{SERVER_PUBLIC_IP}:8000/mobile/{project_id}"
+    
+    try:
+        # 💡 サイネージアプリ（299行目付近）のQRコード生成ロジックと完全に同じ処理を再現
+        qr = qrcode.QRCode(box_size=10, border=2) # ダウンロード用に少し大きめのサイズ（box_size=10）に調整
+        qr.add_data(target_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # メモリバッファにPNG形式で保存（外部通信はゼロ）
+        img_byte_arr = io.BytesIO()
+        img.save(img_byte_arr, format='PNG')
+        img_byte_arr.seek(0)
+        
+        # 確実にPNG画像ファイル（.png）としてブラウザにダウンロードさせる
+        return StreamingResponse(
+            img_byte_arr, 
+            media_type="image/png",
+            headers={
+                "Content-Disposition": f"attachment; filename=project_{project_id}_qr.png",
+                "Cache-Control": "no-cache"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"内部QRコード生成（PNG）に失敗しました: {e}")
 
 # ------------------ ここまで追加機能 ------------------
 
