@@ -2,7 +2,7 @@ import os
 import sqlite3
 import secrets
 from fastapi import FastAPI, Form, UploadFile, File, Depends, HTTPException, status
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from datetime import datetime
 from dateutil import parser as date_parser
@@ -11,8 +11,6 @@ from typing import Optional
 from fastapi import Request
 import urllib.request  # 🌐 EC2のメタデータを取得するために追加
 import urllib.error
-import urllib.parse
-import io
 
 app = FastAPI()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -108,7 +106,7 @@ def init_db():
         cursor.execute("""
             INSERT INTO projects (user_id, name, start_date, end_date, agent, tel, location, loop_seconds, signage_token)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (user2_id, "テストマンション大規模修繕工事（第2現場）", "2026-10-01", "2027-03-15", "現場 次郎", "090-9999-8888", "東京都千代田区", 3, secrets.token_he[...]
+        """, (user2_id, "テストマンション大規模修繕工事（第2現場）", "2026-10-01", "2027-03-15", "現場 次郎", "090-9999-8888", "東京都千代田区", 3, secrets.token_hex(20)))
         conn.commit()
     conn.close()
 
@@ -305,7 +303,9 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                 <!-- 📋 コピペ専用ブロック（ここを追加） -->
                 <div style="background:#fffbe6; padding:12px; border-radius:6px; margin-bottom:15px; border:1px solid #ffe58f; font-size:13px; color:#555;">
                     📌 <b>この現場のサイネージPC起動コマンド</b>（バッチファイル作成時にそのままコピー＆ペーストしてください）
-                    <textarea readonly style="width:100%; height:45px; background:#fff; margin-top:6px; padding:6px; font-family:monospace; font-size:12px; border:1px solid #ccc; border-radius:4p[...]
+                    <textarea readonly style="width:100%; height:45px; background:#fff; margin-top:6px; padding:6px; font-family:monospace; font-size:12px; border:1px solid #ccc; border-radius:4px;">
+                    python signage_app.py --id {info['id']} --token {info['signage_token']} --server {SERVER_PUBLIC_IP}:8000 --kiosk
+                    </textarea>
                     <span style="font-size:11px; color:#888;">※枠内をクリックすると全選択されます。</span>
                 </div>
 
@@ -319,8 +319,8 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                     <div>ループ切替:</div><div><input type="number" name="loop_seconds" value="{info['loop_seconds']}" style="width:80px;"> 秒</div>
                     <div></div>
                     <div style="display: flex; gap: 12px; align-items: center; width: max-content;">
-                        <button type="submit" style="padding: 10px 16px; background: #00a0e9; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; w[...]
-                        <button type="button" onclick="confirmDelete({info['id']}, '{info['name']}')" style="padding: 10px 16px; background: #ff4d4f; color: #fff; border: none; border-radius: 4px[...]
+                        <button type="submit" style="padding: 10px 16px; background: #00a0e9; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; width: 140px;">保存</button>
+                        <button type="button" onclick="confirmDelete({info['id']}, '{info['name']}')" style="padding: 10px 16px; background: #ff4d4f; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; width: 140px;">削除</button>
                     </div>
                 </form>
             </div>
@@ -333,15 +333,15 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
             <div class="grid">
                 <div class="col">
                     <h4>【左】A4区画（作業内容等）</h4>
-                    <div class="drop-zone" id="dz-a4_left">ここにPDFをドラッグ＆ドロップ<br><span style="font-size:12px; color:#666;">（またはクリックしてファイル選択[...]
+                    <div class="drop-zone" id="dz-a4_left">ここにPDFをドラッグ＆ドロップ<br><span style="font-size:12px; color:#666;">（またはクリックしてファイル選択）</span></div>
                     <form id="form-a4_left" action="/admin/upload/{info['id']}/a4_left" method="post" enctype="multipart/form-data">
                         <input type="file" id="file-a4_left" name="file" accept=".pdf" onchange="document.getElementById('form-a4_left').submit();" style="display:none;">
                     </form>
                     <ul>{make_file_list(info['docs_a4_left'], 'a4_left')}</ul>
                 </div>
                 <div class="col">
-                    <h4>【中央】A3区画（図面等）</h4>
-                    <div class="drop-zone" id="dz-a3">ここにPDFをドラッグ＆ドロップ<br><span style="font-size:12px; color:#666;">（またはクリックしてファイル選択）</[...]
+                    <h4>【中央】A3区画（お知らせ図面等）</h4>
+                    <div class="drop-zone" id="dz-a3">ここにPDFをドラッグ＆ドロップ<br><span style="font-size:12px; color:#666;">（またはクリックしてファイル選択）</span></div>
                     <form id="form-a3" action="/admin/upload/{info['id']}/a3" method="post" enctype="multipart/form-data">
                         <input type="file" id="file-a3" name="file" accept=".pdf" onchange="document.getElementById('form-a3').submit();" style="display:none;">
                     </form>
@@ -349,7 +349,7 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                 </div>
                 <div class="col">
                     <h4>【右】A4区画（洗濯物情報等）</h4>
-                    <div class="drop-zone" id="dz-a4_right">ここにPDFをドラッグ＆ドロップ<br><span style="font-size:12px; color:#666;">（またはクリックしてファイル選��[...]
+                    <div class="drop-zone" id="dz-a4_right">ここにPDFをドラッグ＆ドロップ<br><span style="font-size:12px; color:#666;">（またはクリックしてファイル選択）</span></div>
                     <form id="form-a4_right" action="/admin/upload/{info['id']}/a4_right" method="post" enctype="multipart/form-data">
                         <input type="file" id="file-a4_right" name="file" accept=".pdf" onchange="document.getElementById('form-a4_right').submit();" style="display:none;">
                     </form>
@@ -363,7 +363,7 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
     # ユーザーが admin の場合のみユーザー管理メニューを表示
     user_mgmt_html = ""
     if username == 'admin':
-        user_mgmt_html = "<a href='/admin/users' style=\"margin-left:12px; background:#ffc53d; color:#222; padding:6px 12px; border-radius:4px; text-decoration:none; font-weight:bold;\">ユーザ[...]
+        user_mgmt_html = "<a href='/admin/users' style=\"margin-left:12px; background:#ffc53d; color:#222; padding:6px 12px; border-radius:4px; text-decoration:none; font-weight:bold;\">ユーザー管理</a>"
 
     return f"""
     <html>
@@ -421,7 +421,7 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
                     <div>連絡先TEL:</div><div><input type="text" name="tel" placeholder="090-0000-0000"></div>
                     <div>物件所在地:</div><div><input type="text" name="location" placeholder="福岡県博多区"></div>
                     <div>ループ切替:</div><div><input type="number" name="loop_seconds" value="5" style="width:80px;"> 秒</div>
-                    <div></div><div><button type="submit" style="padding:10px 20px; background:#52c41a; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">新規物件[...]
+                    <div></div><div><button type="submit" style="padding:10px 20px; background:#52c41a; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">新規物件追加</button></div>
                 </form>
             </div>
         </div>
@@ -460,7 +460,7 @@ def admin_panel(current_id: Optional[int] = None, user_id: Optional[int] = Depen
 
 # 物件の新規作成 API
 @app.post("/admin/create")
-def create_project(name: str = Form(...), start_date: str = Form(...), end_date: str = Form(...), agent: str = Form(...), tel: str = Form(...), location: str = Form(...), loop_seconds: int = Form[...]
+def create_project(name: str = Form(...), start_date: str = Form(...), end_date: str = Form(...), agent: str = Form(...), tel: str = Form(...), location: str = Form(...), loop_seconds: int = Form(...), user_id: Optional[int] = Depends(get_current_user_id)):
     if user_id is None:
         return RedirectResponse(url="/login", status_code=303)
     
@@ -481,7 +481,7 @@ def create_project(name: str = Form(...), start_date: str = Form(...), end_date:
 
 # 物件情報の更新 API（🔒 所有権チェック）
 @app.post("/admin/update/{project_id}")
-def update_project(project_id: int, name: str = Form(...), start_date: str = Form(...), end_date: str = Form(...), agent: str = Form(...), tel: str = Form(...), location: str = Form(...), loop_se[...]
+def update_project(project_id: int, name: str = Form(...), start_date: str = Form(...), end_date: str = Form(...), agent: str = Form(...), tel: str = Form(...), location: str = Form(...), loop_seconds: int = Form(...), user_id: Optional[int] = Depends(get_current_user_id)):
     if user_id is None:
         return RedirectResponse(url="/login", status_code=303)
         
@@ -569,40 +569,6 @@ def mobile_site(project_id: int):
     </html>
     """
     return html_content
-
-# 新規追加: 管理画面用のQRコード画像ダウンロード（所有権チェックあり）
-@app.get("/admin/download_qr/{project_id}")
-def download_qr(project_id: int, user_id: Optional[int] = Depends(get_current_user_id)):
-    """管理画面からその物件のスマホ用URLのQRコードをPNGでダウンロードします。
-    - まずはサーバー上で qrcode ライブラリが使えるか試し、なければ外部のQR生成APIへフォールバックします。
-    - 所有権チェックあり (ログインユーザーが該当物件の所有者であること)
-    """
-    if user_id is None:
-        return RedirectResponse(url="/login", status_code=303)
-
-    info = fetch_project_info(project_id)
-    if not info or info.get("user_id") != user_id:
-        raise HTTPException(status_code=403, detail="Unauthorized")
-
-    mobile_url = info.get("mobile_url") or f"/mobile/{project_id}"
-
-    # 1) 可能ならローカルでqrcodeライブラリを使って生成
-    try:
-        import qrcode
-        buf = io.BytesIO()
-        qr = qrcode.make(mobile_url)
-        qr.save(buf, format="PNG")
-        buf.seek(0)
-        return StreamingResponse(buf, media_type="image/png", headers={"Content-Disposition": f"attachment; filename=\"qrcode_{project_id}.png\""})
-    except Exception:
-        # 2) フォールバック: 外部APIを使ってPNGを取得
-        api = f"https://api.qrserver.com/v1/create-qr-code/?size=400x400&data={urllib.parse.quote(mobile_url, safe='')}"
-        try:
-            with urllib.request.urlopen(api, timeout=5) as res:
-                data = res.read()
-            return Response(content=data, media_type="image/png", headers={"Content-Disposition": f"attachment; filename=\"qrcode_{project_id}.png\""})
-        except Exception:
-            raise HTTPException(status_code=500, detail="QR code generation failed")
 
 # 🔒 オブジェクトとDBから物件を完全に消去するAPI（🔒 所有権チェック）
 @app.get("/admin/project/delete/{project_id}")
@@ -715,7 +681,7 @@ def admin_users(user_id: Optional[int] = Depends(get_current_user_id)):
         # プロジェクト数をカウント
         cursor.execute("SELECT COUNT(*) FROM projects WHERE user_id = ?", (uid,))
         cnt = cursor.fetchone()[0]
-        delete_btn = "" if uname == 'admin' else f"<a href='/admin/users/delete/{uid}' style='color:red;' onclick=\"return confirm('このユーザーを削除しますか？\n関連する物件�[...]
+        delete_btn = "" if uname == 'admin' else f"<a href='/admin/users/delete/{uid}' style='color:red;' onclick=\"return confirm('このユーザーを削除しますか？\n関連する物件はすべて削除されます。')\">[削除]</a>"
         users_html += f"<tr><td>{uid}</td><td>{uname}</td><td>{cnt}</td><td>{delete_btn}</td></tr>"
 
     conn.close()
