@@ -570,11 +570,11 @@ def mobile_site(project_id: int):
         </div>
         <div style="background:#fff; padding:15px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
             <h3 style="margin-top:0; color:#00a572; border-bottom:2px solid #00a572; padding-bottom:5px;">📂 掲示資料一覧</h3>
-            <h4 style="margin-bottom:5px; color:#555;">■ A4左（作業内容等）：</h4>
+            <h4 style="margin-bottom:5px; color:#555;">■ A4左（洗濯物情報）：</h4>
             <ul style="padding-left:20px; margin-top:5px;">{make_mobile_links(info['docs_a4_left'], 'a4_left')}</ul>
-            <h4 style="margin-bottom:5px; color:#555;">■ A3中央（図面等）：</h4>
+            <h4 style="margin-bottom:5px; color:#555;">■ A3中央（作業範囲・作業内容）：</h4>
             <ul style="padding-left:20px; margin-top:5px;">{make_mobile_links(info['docs_a3'], 'a3')}</ul>
-            <h4 style="margin-bottom:5px; color:#555;">■ A4右（洗濯物情報等）：</h4>
+            <h4 style="margin-bottom:5px; color:#555;">■ A4右（工事お知らせ）：</h4>
             <ul style="padding-left:20px; margin-top:5px;">{make_mobile_links(info['docs_a4_right'], 'a4_right')}</ul>
         </div>
     </body>
