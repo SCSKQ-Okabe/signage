@@ -340,7 +340,7 @@ def admin_panel(user_id: Optional[int] = Depends(get_current_user_id), current_i
             <h3>2. 資料PDFの登録（枠内にファイルを直接ドラッグ＆ドロップ、またはクリックして選択）</h3>
             <div class="grid">
                 <div class="col">
-                    <h4>【左】A4区画（作業内容等）</h4>
+                    <h4>【左】A4区画（洗濯物情報）</h4>
                     <div class="drop-zone" id="dz-a4_left">ここにPDFをドラッグ＆ドロップ<br><span style="font-size:12px; color:#666;">（またはクリックしてファイル選択）</span></div>
                     <form id="form-a4_left" action="/admin/upload/{info['id']}/a4_left" method="post" enctype="multipart/form-data">
                         <input type="file" id="file-a4_left" name="file" accept=".pdf" onchange="document.getElementById('form-a4_left').submit();" style="display:none;">
@@ -348,7 +348,7 @@ def admin_panel(user_id: Optional[int] = Depends(get_current_user_id), current_i
                     <ul>{make_file_list(info['docs_a4_left'], 'a4_left')}</ul>
                 </div>
                 <div class="col">
-                    <h4>【中央】A3区画（お知らせ図面等）</h4>
+                    <h4>【中央】A3区画（作業範囲・作業内容）</h4>
                     <div class="drop-zone" id="dz-a3">ここにPDFをドラッグ＆ドロップ<br><span style="font-size:12px; color:#666;">（またはクリックしてファイル選択）</span></div>
                     <form id="form-a3" action="/admin/upload/{info['id']}/a3" method="post" enctype="multipart/form-data">
                         <input type="file" id="file-a3" name="file" accept=".pdf" onchange="document.getElementById('form-a3').submit();" style="display:none;">
@@ -356,7 +356,7 @@ def admin_panel(user_id: Optional[int] = Depends(get_current_user_id), current_i
                     <ul>{make_file_list(info['docs_a3'], 'a3')}</ul>
                 </div>
                 <div class="col">
-                    <h4>【右】A4区画（洗濯物情報等）</h4>
+                    <h4>【右】A4区画（工事お知らせ）</h4>
                     <div class="drop-zone" id="dz-a4_right">ここにPDFをドラッグ＆ドロップ<br><span style="font-size:12px; color:#666;">（またはクリックしてファイル選択）</span></div>
                     <form id="form-a4_right" action="/admin/upload/{info['id']}/a4_right" method="post" enctype="multipart/form-data">
                         <input type="file" id="file-a4_right" name="file" accept=".pdf" onchange="document.getElementById('form-a4_right').submit();" style="display:none;">
