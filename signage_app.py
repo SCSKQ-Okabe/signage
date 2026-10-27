@@ -31,6 +31,31 @@ def format_ja_date_with_weekday(date_value):
     return str(date_value)
 
 
+def is_valid_pdf_bytes(data, content_length=None):
+    """ダウンロードしたバイト列が「完全なPDF」かを検証する。
+    ・空でない / Content-Lengthと一致（途中切断の検出）
+    ・先頭が %PDF- / 末尾付近に %%EOF（書き込み途中・切断の検出）
+    ・PyMuPDFで実際に開けて1ページ以上ある
+    """
+    if not data:
+        return False
+    if content_length is not None:
+        try:
+            if int(content_length) != len(data):
+                return False
+        except ValueError:
+            pass
+    if not data.startswith(b"%PDF-"):
+        return False
+    if b"%%EOF" not in data[-2048:]:
+        return False
+    try:
+        with pymupdf.open(stream=data, filetype="pdf") as doc:
+            return doc.page_count > 0
+    except Exception:
+        return False
+
+
 class SignageWindow(QMainWindow):
     def __init__(self, project_id, token, is_kiosk, server_url):
         super().__init__()
@@ -320,10 +345,17 @@ class SignageWindow(QMainWindow):
                 url_address = self.server_url
                 url = f"http://{url_address}/files/{self.project_id}/{sub_folder}/{filename}"
                 try:
-                    res = requests.get(url, timeout=5)
-                    if res.status_code == 200:
-                        with open(local_path, "wb") as f: f.write(res.content)
-                except Exception: pass
+                    res = requests.get(url, timeout=10)
+                    # 🛡️ 【修正②】中身が完全なPDFであることを確認してから保存する
+                    if res.status_code == 200 and is_valid_pdf_bytes(res.content, res.headers.get("Content-Length")):
+                        tmp_path = local_path + ".part"
+                        with open(tmp_path, "wb") as f:
+                            f.write(res.content)
+                        os.replace(tmp_path, local_path)  # 書き込み完了後に入れ替え
+                    else:
+                        print(f"不完全なPDFを受信したため保存をスキップしました（次回再取得）: {filename}")
+                except Exception as e:
+                    print(f"ダウンロードに失敗しました（次回再取得）: {filename} / {e}")
 
         local_folder = os.path.join("signage_storage", str(self.project_id), sub_folder)
         if os.path.exists(local_folder):

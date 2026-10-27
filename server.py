@@ -523,8 +523,23 @@ async def upload_pdf(project_id: int, folder_key: str, file: UploadFile = File(.
     folders = get_project_folders(project_id)
     if folder_key in folders and file.filename.lower().endswith('.pdf'):
         save_path = os.path.join(folders[folder_key], file.filename)
-        with open(save_path, "wb") as b:
-            b.write(await file.read())
+        # 🛡️ 【修正①】一時ファイルに書き込み、完了後に本来の名前へアトミックに置き換える
+        #   ・一時ファイル名は .pdf で終わらないため、書き込み中は get_stored_files() の一覧に出ない
+        #   ・os.replace() は同一フォルダ内で一瞬で入れ替わるため、途中までのPDFが配信されることはない
+        tmp_path = save_path + f".{secrets.token_hex(4)}.uploading"
+        try:
+            content = await file.read()
+            with open(tmp_path, "wb") as b:
+                b.write(content)
+                b.flush()
+                os.fsync(b.fileno())
+            os.replace(tmp_path, save_path)
+        finally:
+            if os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except OSError:
+                    pass
     return RedirectResponse(url=f"/admin?current_id={project_id}", status_code=303)
 
 # PDF削除 API（🔒 所有権チェック）
